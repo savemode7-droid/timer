@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>作業タイマー</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #17202a;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #dc2626;
+      --green: #16a34a;
+      --shadow: 0 8px 24px rgba(0,0,0,.08);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+    }
+    header {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 18px 4px 8px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: .02em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto 40px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      margin: 12px 0;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    input, select {
+      width: 100%;
+      font-size: 16px;
+      padding: 13px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+      touch-action: manipulation;
+      white-space: nowrap;
+    }
+    button:active { transform: scale(.99); }
+    button.secondary {
+      background: #eef2ff;
+      color: var(--primary-dark);
+    }
+    button.danger {
+      background: #fee2e2;
+      color: var(--danger);
+    }
+    button.green {
+      background: var(--green);
+      color: white;
+    }
+    button.ghost {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .timer-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .timer-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      background: #fff;
+    }
+    .timer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .name {
+      font-size: 17px;
+      font-weight: 800;
+      word-break: break-word;
+    }
+    .elapsed {
+      font-size: 26px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      margin: 10px 0;
+    }
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .section-title {
+      font-size: 18px;
+      margin: 0 0 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 4px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 700; }
+    .right { text-align: right; }
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 18px 4px;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    @media (max-width: 420px) {
+      h1 { font-size: 24px; }
+      .row { align-items: stretch; }
+      .row button { min-width: 94px; }
+      .elapsed { font-size: 24px; }
+      table { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>作業タイマー</h1>
+    <div class="sub">項目ごとに時間を記録できます。データはこの端末のブラウザに保存されます。</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="row">
+        <input id="newItemName" placeholder="項目名を入力 例：メルマガ運営" />
+        <button id="addBtn">追加</button>
+      </div>
+      <div class="timer-list" id="timerList"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">今日の合計</h2>
+      <div id="summary"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">記録</h2>
+      <div class="row">
+        <input id="dateFilter" type="date" />
+        <button class="secondary" id="todayBtn">今日</button>
+      </div>
+      <div class="toolbar">
+        <button class="ghost" id="csvBtn">CSV出力</button>
+        <button class="danger" id="clearLogsBtn">表示日の記録を削除</button>
+      </div>
+      <div id="logs"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = "work_timer_app_v1";
+    const $ = (id) => document.getElementById(id);
+
+    let state = loadState();
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try { return JSON.parse(raw); } catch {}
+      }
+      return {
+        items: [
+          { id: crypto.randomUUID(), name: "メルマガ運営", runningSince: null },
+          { id: crypto.randomUUID(), name: "動画チェック", runningSince: null },
+          { id: crypto.randomUUID(), name: "休憩", runningSince: null }
+        ],
+        logs: []
+      };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function dateKey(d = new Date()) {
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    }
+
+    function timeText(iso) {
+      const d = new Date(iso);
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function durationText(ms) {
+      const totalSec = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
+      return `${m}:${pad(s)}`;
+    }
+
+    function durationJa(ms) {
+      const totalMin = Math.round(ms / 60000);
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      if (h && m) return `${h}時間${m}分`;
+      if (h) return `${h}時間`;
+      return `${m}分`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+      }[c]));
+    }
+
+    function renderTimers() {
+      const list = $("timerList");
+      if (state.items.length === 0) {
+        list.innerHTML = `<div class="empty">項目を追加してください。</div>`;
+        return;
+      }
+
+      list.innerHTML = state.items.map(item => {
+        const running = !!item.runningSince;
+        const elapsed = running ? Date.now() - new Date(item.runningSince).getTime() : 0;
+        return `
+          <div class="timer-item">
+            <div class="timer-top">
+              <div>
+                <div class="name">${escapeHtml(item.name)}</div>
+                <div class="small">${running ? "計測中: " + timeText(item.runningSince) + "開始" : "停止中"}</div>
+              </div>
+              <button class="danger" data-delete="${item.id}">削除</button>
+            </div>
+            <div class="elapsed" data-elapsed="${item.id}">${durationText(elapsed)}</div>
+            <div class="actions">
+              ${running
+                ? `<button class="green" data-stop="${item.id}">停止して記録</button>`
+                : `<button data-start="${item.id}">開始</button>`
+              }
+              <button class="ghost" data-rename="${item.id}">名前変更</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderSummary() {
+      const today = dateKey();
+      const sums = {};
+      state.logs.filter(l => l.date === today).forEach(l => {
+        sums[l.itemName] = (sums[l.itemName] || 0) + l.durationMs;
+      });
+
+      const entries = Object.entries(sums).sort((a,b) => b[1] - a[1]);
+      $("summary").innerHTML = entries.length
+        ? `<table><thead><tr><th>項目</th><th class="right">合計</th></tr></thead><tbody>` +
+          entries.map(([name, ms]) => `<tr><td>${escapeHtml(name)}</td><td class="right">${durationJa(ms)}</td></tr>`).join("") +
+          `</tbody></table>`
+        : `<div class="empty">今日の記録はまだありません。</div>`;
+    }
+
+    function renderLogs() {
+      const targetDate = $("dateFilter").value || dateKey();
+      const logs = state.logs.filter(l => l.date === targetDate).sort((a,b) => new Date(b.start) - new Date(a.start));
+
+      $("logs").innerHTML = logs.length
+        ? `<table><thead><tr><th>項目</th><th>時間</th><th class="right">作業時間</th></tr></thead><tbody>` +
+          logs.map(l => `
+            <tr>
+              <td>${escapeHtml(l.itemName)}</td>
+              <td>${timeText(l.start)}-${timeText(l.end)}</td>
+              <td class="right">${durationJa(l.durationMs)}</td>
+            </tr>`).join("") +
+          `</tbody></table>`
+        : `<div class="empty">この日の記録はありません。</div>`;
+    }
+
+    function renderAll() {
+      renderTimers();
+      renderSummary();
+      renderLogs();
+    }
+
+    function addItem() {
+      const name = $("newItemName").value.trim();
+      if (!name) return;
+      state.items.push({ id: crypto.randomUUID(), name, runningSince: null });
+      $("newItemName").value = "";
+      saveState();
+      renderAll();
+    }
+
+    function startItem(id) {
+      state.items.forEach(i => {
+        if (i.id === id) i.runningSince = new Date().toISOString();
+      });
+      saveState();
+      renderAll();
+    }
+
+    function stopItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item || !item.runningSince) return;
+      const start = item.runningSince;
+      const end = new Date().toISOString();
+      const durationMs = new Date(end).getTime() - new Date(start).getTime();
+
+      state.logs.push({
+        id: crypto.randomUUID(),
+        itemId: item.id,
+        itemName: item.name,
+        start,
+        end,
+        date: dateKey(new Date(start)),
+        durationMs
+      });
+      item.runningSince = null;
+      saveState();
+      renderAll();
+    }
+
+    function deleteItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      if (!confirm(`「${item.name}」を削除しますか？過去の記録は残ります。`)) return;
+      state.items = state.items.filter(i => i.id !== id);
+      saveState();
+      renderAll();
+    }
+
+    function renameItem(id) {
+      const item = state.items.find(i => i.id === id);
+      if (!item) return;
+      const name = prompt("新しい項目名", item.name);
+      if (!name || !name.trim()) return;
+      item.name = name.trim();
+      saveState();
+      renderAll();
+    }
+
+    function exportCsv() {
+      const rows = [["日付","項目","開始","終了","分"]];
+      state.logs.forEach(l => {
+        rows.push([
+          l.date,
+          l.itemName,
+          timeText(l.start),
+          timeText(l.end),
+          Math.round(l.durationMs / 60000)
+        ]);
+      });
+      const csv = rows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `作業タイマー記録_${dateKey()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearVisibleLogs() {
+      const targetDate = $("dateFilter").value || dateKey();
+      if (!confirm(`${targetDate} の記録を削除しますか？`)) return;
+      state.logs = state.logs.filter(l => l.date !== targetDate);
+      saveState();
+      renderAll();
+    }
+
+    $("addBtn").addEventListener("click", addItem);
+    $("newItemName").addEventListener("keydown", e => {
+      if (e.key === "Enter") addItem();
+    });
+    $("todayBtn").addEventListener("click", () => {
+      $("dateFilter").value = dateKey();
+      renderLogs();
+    });
+    $("dateFilter").addEventListener("change", renderLogs);
+    $("csvBtn").addEventListener("click", exportCsv);
+    $("clearLogsBtn").addEventListener("click", clearVisibleLogs);
+
+    document.body.addEventListener("click", e => {
+      const el = e.target;
+      if (el.dataset.start) startItem(el.dataset.start);
+      if (el.dataset.stop) stopItem(el.dataset.stop);
+      if (el.dataset.delete) deleteItem(el.dataset.delete);
+      if (el.dataset.rename) renameItem(el.dataset.rename);
+    });
+
+    $("dateFilter").value = dateKey();
+    renderAll();
+    setInterval(() => {
+      state.items.forEach(item => {
+        if (!item.runningSince) return;
+        const node = document.querySelector(`[data-elapsed="${item.id}"]`);
+        if (node) node.textContent = durationText(Date.now() - new Date(item.runningSince).getTime());
+      });
+    }, 1000);
+  </script>
+</body>
+</html>
