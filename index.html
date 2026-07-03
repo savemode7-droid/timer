@@ -26,25 +26,10 @@
       color: var(--text);
       padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
     }
-    header {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 18px 4px 8px;
-    }
-    h1 {
-      margin: 0;
-      font-size: 28px;
-      letter-spacing: .02em;
-    }
-    .sub {
-      color: var(--muted);
-      font-size: 14px;
-      margin-top: 4px;
-    }
-    main {
-      max-width: 720px;
-      margin: 0 auto 40px;
-    }
+    header, main { max-width: 760px; margin: 0 auto; }
+    header { padding: 18px 4px 8px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: .02em; }
+    .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
     .card {
       background: var(--card);
       border: 1px solid var(--line);
@@ -53,11 +38,8 @@
       padding: 14px;
       margin: 12px 0;
     }
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .stack { display: grid; gap: 10px; }
     input, select {
       width: 100%;
       font-size: 16px;
@@ -66,6 +48,7 @@
       border-radius: 14px;
       background: #fff;
     }
+    input[type="time"] { font-variant-numeric: tabular-nums; }
     button {
       border: 0;
       border-radius: 14px;
@@ -78,69 +61,65 @@
       touch-action: manipulation;
       white-space: nowrap;
     }
+    button:disabled { opacity: .45; cursor: not-allowed; }
     button:active { transform: scale(.99); }
-    button.secondary {
-      background: #eef2ff;
-      color: var(--primary-dark);
+    button.secondary { background: #eef2ff; color: var(--primary-dark); }
+    button.danger { background: #fee2e2; color: var(--danger); }
+    button.green { background: var(--green); color: white; }
+    button.ghost { background: #f3f4f6; color: #374151; }
+    button.plus {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      font-size: 26px;
+      line-height: 1;
+      padding: 0;
     }
-    button.danger {
-      background: #fee2e2;
-      color: var(--danger);
-    }
-    button.green {
-      background: var(--green);
-      color: white;
-    }
-    button.ghost {
-      background: #f3f4f6;
-      color: #374151;
-    }
-    .timer-list {
-      display: grid;
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .timer-item {
+    .panel-list { display: grid; gap: 12px; }
+    .timer-panel {
       border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 12px;
+      border-radius: 18px;
+      padding: 14px;
       background: #fff;
     }
-    .timer-top {
+    .panel-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+      margin-bottom: 10px;
     }
-    .name {
-      font-size: 17px;
-      font-weight: 800;
-      word-break: break-word;
-    }
+    .panel-title { font-weight: 900; font-size: 18px; }
     .elapsed {
-      font-size: 26px;
+      font-size: 34px;
       font-weight: 900;
       font-variant-numeric: tabular-nums;
+      text-align: center;
+      margin: 16px 0;
+    }
+    .time-edit {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
       margin: 10px 0;
     }
-    .small {
-      font-size: 13px;
+    .time-box {
+      background: #f9fafb;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .time-box label {
+      display: block;
       color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
     }
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .section-title {
-      font-size: 18px;
-      margin: 0 0 10px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
+    .small { font-size: 13px; color: var(--muted); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .section-title { font-size: 18px; margin: 0 0 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td {
       border-bottom: 1px solid var(--line);
       padding: 9px 4px;
@@ -149,39 +128,59 @@
     }
     th { color: var(--muted); font-weight: 700; }
     .right { text-align: right; }
-    .empty {
-      color: var(--muted);
-      text-align: center;
-      padding: 18px 4px;
-    }
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    .empty { color: var(--muted); text-align: center; padding: 18px 4px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .inline-add {
       margin-top: 10px;
+      padding: 12px;
+      border: 1px dashed var(--line);
+      border-radius: 16px;
+      background: #fafafa;
     }
+    .item-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      background: #fff;
+    }
+    .item-name { font-weight: 800; }
+    .item-kana { color: var(--muted); font-size: 13px; }
+    dialog {
+      border: 0;
+      border-radius: 20px;
+      padding: 0;
+      width: min(94vw, 560px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.35); }
+    .dialog-body { padding: 16px; }
+    .dialog-title { font-size: 20px; font-weight: 900; margin-bottom: 12px; }
     @media (max-width: 420px) {
       h1 { font-size: 24px; }
       .row { align-items: stretch; }
-      .row button { min-width: 94px; }
-      .elapsed { font-size: 24px; }
+      .elapsed { font-size: 32px; }
+      .time-edit { grid-template-columns: 1fr; }
       table { font-size: 13px; }
+      .actions button { flex: 1; }
     }
   </style>
 </head>
 <body>
   <header>
     <h1>作業タイマー</h1>
-    <div class="sub">項目ごとに時間を記録できます。データはこの端末のブラウザに保存されます。</div>
+    <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
 
   <main>
     <section class="card">
-      <div class="row">
-        <input id="newItemName" placeholder="項目名を入力 例：メルマガ運営" />
-        <button id="addBtn">追加</button>
+      <div class="panel-list" id="panelList"></div>
+      <div class="toolbar">
+        <button class="plus" id="addPanelBtn" title="パネル追加">＋</button>
+        <button class="secondary" id="openItemDialogBtn">プルダウン項目管理</button>
       </div>
-      <div class="timer-list" id="timerList"></div>
     </section>
 
     <section class="card">
@@ -203,8 +202,24 @@
     </section>
   </main>
 
+  <dialog id="itemDialog">
+    <div class="dialog-body">
+      <div class="dialog-title">プルダウン項目管理</div>
+      <div class="stack">
+        <input id="newItemName" placeholder="項目名 例：メルマガ運営" />
+        <input id="newItemKana" placeholder="ふりがな 例：めるまがうんえい" />
+        <div class="row">
+          <button id="addItemBtn">項目を追加</button>
+          <button class="ghost" id="closeDialogBtn">閉じる</button>
+        </div>
+      </div>
+      <div id="itemManageList"></div>
+    </div>
+  </dialog>
+
   <script>
-    const STORAGE_KEY = "work_timer_app_v1";
+    const STORAGE_KEY = "work_timer_panel_app_v4";
+    const OLD_KEYS = ["work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
     const $ = (id) => document.getElementById(id);
 
     let state = loadState();
@@ -212,20 +227,71 @@
     function loadState() {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        try { return JSON.parse(raw); } catch {}
+        try { return normalizeState(JSON.parse(raw)); } catch {}
       }
+
+      for (const key of OLD_KEYS) {
+        const old = localStorage.getItem(key);
+        if (!old) continue;
+        try {
+          const oldState = JSON.parse(old);
+          return normalizeState({
+            items: oldState.items || [],
+            panels: oldState.panels || [{ id: crypto.randomUUID(), itemId: null, runningSince: null }],
+            logs: oldState.logs || []
+          });
+        } catch {}
+      }
+
       return {
-        items: [
-          { id: crypto.randomUUID(), name: "メルマガ運営", runningSince: null },
-          { id: crypto.randomUUID(), name: "動画チェック", runningSince: null },
-          { id: crypto.randomUUID(), name: "休憩", runningSince: null }
-        ],
+        items: [],
+        panels: [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null }],
         logs: []
       };
     }
 
+    function normalizeState(s) {
+      const items = Array.isArray(s.items) ? s.items.filter(i => i && i.name).map(i => ({
+        id: i.id || crypto.randomUUID(),
+        name: i.name,
+        kana: i.kana || i.name
+      })) : [];
+
+      const logs = Array.isArray(s.logs) ? s.logs.map(l => {
+        const start = l.start || new Date().toISOString();
+        const end = l.end || start;
+        return {
+          id: l.id || crypto.randomUUID(),
+          itemId: l.itemId || null,
+          itemName: l.itemName || "",
+          start,
+          end,
+          date: l.date || dateKey(new Date(start)),
+          durationMs: Math.max(0, new Date(end).getTime() - new Date(start).getTime())
+        };
+      }) : [];
+
+      let panels = Array.isArray(s.panels) && s.panels.length
+        ? s.panels.map(p => ({
+            id: p.id || crypto.randomUUID(),
+            itemId: p.itemId || null,
+            runningSince: p.runningSince || null,
+            activeLogId: p.activeLogId || null,
+            lastLogId: p.lastLogId || null
+          }))
+        : [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null }];
+
+      return { items, panels, logs };
+    }
+
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function sortedItems() {
+      return [...state.items].sort((a, b) =>
+        (a.kana || a.name).localeCompare((b.kana || b.name), "ja")
+      );
     }
 
     function pad(n) { return String(n).padStart(2, "0"); }
@@ -235,8 +301,22 @@
     }
 
     function timeText(iso) {
+      if (!iso) return "";
       const d = new Date(iso);
       return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function dateTimeLocalValue(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function localInputToIso(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return null;
+      return d.toISOString();
     }
 
     function durationText(ms) {
@@ -258,41 +338,124 @@
     }
 
     function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
         "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
       }[c]));
     }
 
-    function renderTimers() {
-      const list = $("timerList");
-      if (state.items.length === 0) {
-        list.innerHTML = `<div class="empty">項目を追加してください。</div>`;
-        return;
-      }
+    function itemById(id) {
+      return state.items.find(i => i.id === id);
+    }
 
-      list.innerHTML = state.items.map(item => {
-        const running = !!item.runningSince;
-        const elapsed = running ? Date.now() - new Date(item.runningSince).getTime() : 0;
+    function logById(id) {
+      return state.logs.find(l => l.id === id);
+    }
+
+    function getPanelLog(panel) {
+      return logById(panel.activeLogId) || logById(panel.lastLogId);
+    }
+
+    function recalcLog(log) {
+      const startMs = new Date(log.start).getTime();
+      const endMs = new Date(log.end).getTime();
+      log.durationMs = Math.max(0, endMs - startMs);
+      log.date = dateKey(new Date(log.start));
+    }
+
+    function renderPanels() {
+      const list = $("panelList");
+      if (!state.panels.length) addPanel(false);
+
+      const options = `<option value="">項目を選択</option>` + sortedItems().map(item =>
+        `<option value="${item.id}">${escapeHtml(item.name)}</option>`
+      ).join("");
+
+      list.innerHTML = state.panels.map((panel, index) => {
+        const item = itemById(panel.itemId);
+        const running = !!panel.runningSince;
+        const panelLog = getPanelLog(panel);
+        const elapsed = running && panelLog
+          ? Date.now() - new Date(panelLog.start).getTime()
+          : panelLog
+            ? panelLog.durationMs
+            : 0;
+
         return `
-          <div class="timer-item">
-            <div class="timer-top">
+          <div class="timer-panel">
+            <div class="panel-head">
               <div>
-                <div class="name">${escapeHtml(item.name)}</div>
-                <div class="small">${running ? "計測中: " + timeText(item.runningSince) + "開始" : "停止中"}</div>
+                <div class="panel-title">パネル ${index + 1}</div>
+                <div class="small">${running ? "計測中: " + timeText(panelLog?.start || panel.runningSince) + "開始" : "停止中"}</div>
               </div>
-              <button class="danger" data-delete="${item.id}">削除</button>
+              ${state.panels.length > 1 ? `<button class="danger" data-delete-panel="${panel.id}">削除</button>` : ""}
             </div>
-            <div class="elapsed" data-elapsed="${item.id}">${durationText(elapsed)}</div>
+
+            <select data-select-panel="${panel.id}" ${running ? "disabled" : ""}>
+              ${options}
+            </select>
+
+            <div class="inline-add">
+              <div class="small">このパネルで項目を直接追加</div>
+              <div class="stack">
+                <input data-direct-name="${panel.id}" placeholder="項目名" ${running ? "disabled" : ""} />
+                <input data-direct-kana="${panel.id}" placeholder="ふりがな" ${running ? "disabled" : ""} />
+                <button class="secondary" data-direct-add="${panel.id}" ${running ? "disabled" : ""}>追加して選択</button>
+              </div>
+            </div>
+
+            <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
+
             <div class="actions">
               ${running
-                ? `<button class="green" data-stop="${item.id}">停止して記録</button>`
-                : `<button data-start="${item.id}">開始</button>`
+                ? `<button class="green" data-stop="${panel.id}">終了</button>`
+                : `<button data-start="${panel.id}" ${!item ? "disabled" : ""}>開始</button>`
               }
-              <button class="ghost" data-rename="${item.id}">名前変更</button>
+            </div>
+
+            <div class="time-edit">
+              <div class="time-box">
+                <label>開始時間</label>
+                <input type="datetime-local" data-start-time="${panel.id}" value="${dateTimeLocalValue(panelLog?.start)}" ${!panelLog ? "disabled" : ""} />
+              </div>
+              <div class="time-box">
+                <label>終了時間</label>
+                <input type="datetime-local" data-end-time="${panel.id}" value="${dateTimeLocalValue(panelLog?.end)}" ${!panelLog ? "disabled" : ""} />
+              </div>
+            </div>
+            <div class="small">
+              ${panelLog ? "時刻を変更すると、下の一覧・合計・CSVにも反映されます。" : "開始すると時刻が表示されます。"}
             </div>
           </div>
         `;
       }).join("");
+
+      state.panels.forEach(panel => {
+        const select = document.querySelector(`[data-select-panel="${panel.id}"]`);
+        if (select) select.value = panel.itemId || "";
+      });
+    }
+
+    function renderItemManageList() {
+      const area = $("itemManageList");
+      const items = sortedItems();
+
+      if (!items.length) {
+        area.innerHTML = `<div class="empty">項目はまだありません。</div>`;
+        return;
+      }
+
+      area.innerHTML = items.map(item => `
+        <div class="item-card">
+          <div>
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            <div class="item-kana">${escapeHtml(item.kana)}</div>
+          </div>
+          <div class="actions">
+            <button class="ghost" data-edit-item="${item.id}">編集</button>
+            <button class="danger" data-delete-item="${item.id}">削除</button>
+          </div>
+        </div>
+      `).join("");
     }
 
     function renderSummary() {
@@ -327,64 +490,193 @@
     }
 
     function renderAll() {
-      renderTimers();
+      renderPanels();
+      renderItemManageList();
       renderSummary();
       renderLogs();
     }
 
-    function addItem() {
-      const name = $("newItemName").value.trim();
-      if (!name) return;
-      state.items.push({ id: crypto.randomUUID(), name, runningSince: null });
-      $("newItemName").value = "";
+    function addPanel(shouldRender = true) {
+      state.panels.push({ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null });
+      saveState();
+      if (shouldRender) renderAll();
+    }
+
+    function deletePanel(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel) return;
+      if (panel.runningSince && !confirm("計測中です。削除しますか？記録は残りますが、終了はされません。")) return;
+      state.panels = state.panels.filter(p => p.id !== id);
       saveState();
       renderAll();
     }
 
-    function startItem(id) {
-      state.items.forEach(i => {
-        if (i.id === id) i.runningSince = new Date().toISOString();
-      });
+    function changePanelItem(panelId, itemId) {
+      const panel = state.panels.find(p => p.id === panelId);
+      if (!panel || panel.runningSince) return;
+      panel.itemId = itemId || null;
+      panel.lastLogId = null;
+      panel.activeLogId = null;
       saveState();
       renderAll();
     }
 
-    function stopItem(id) {
-      const item = state.items.find(i => i.id === id);
-      if (!item || !item.runningSince) return;
-      const start = item.runningSince;
-      const end = new Date().toISOString();
-      const durationMs = new Date(end).getTime() - new Date(start).getTime();
+    function startPanel(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel || !panel.itemId) return;
 
-      state.logs.push({
+      const item = itemById(panel.itemId);
+      if (!item) return;
+
+      const now = new Date().toISOString();
+      const log = {
         id: crypto.randomUUID(),
         itemId: item.id,
         itemName: item.name,
-        start,
-        end,
-        date: dateKey(new Date(start)),
-        durationMs
-      });
-      item.runningSince = null;
+        start: now,
+        end: now,
+        date: dateKey(new Date(now)),
+        durationMs: 0
+      };
+
+      state.logs.push(log);
+      panel.runningSince = now;
+      panel.activeLogId = log.id;
+      panel.lastLogId = log.id;
+
+      saveState();
+      renderAll();
+    }
+
+    function stopPanel(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel || !panel.runningSince) return;
+
+      const log = logById(panel.activeLogId);
+      if (!log) {
+        panel.runningSince = null;
+        panel.activeLogId = null;
+        saveState();
+        renderAll();
+        return;
+      }
+
+      log.end = new Date().toISOString();
+      recalcLog(log);
+
+      panel.runningSince = null;
+      panel.activeLogId = null;
+      panel.lastLogId = log.id;
+
+      saveState();
+      renderAll();
+    }
+
+    function updatePanelTime(panelId, field, value) {
+      const panel = state.panels.find(p => p.id === panelId);
+      if (!panel) return;
+
+      const log = getPanelLog(panel);
+      if (!log) return;
+
+      const iso = localInputToIso(value);
+      if (!iso) return;
+
+      if (field === "start") {
+        log.start = iso;
+        if (panel.runningSince) panel.runningSince = iso;
+      } else {
+        log.end = iso;
+      }
+
+      recalcLog(log);
+      saveState();
+      renderAll();
+    }
+
+    function createItem(name, kana) {
+      const item = { id: crypto.randomUUID(), name: name.trim(), kana: kana.trim() };
+      state.items.push(item);
+      return item;
+    }
+
+    function addItemFromDialog() {
+      const name = $("newItemName").value.trim();
+      const kana = $("newItemKana").value.trim();
+      if (!name || !kana) {
+        alert("項目名とふりがなを両方入力してください。");
+        return;
+      }
+      createItem(name, kana);
+      $("newItemName").value = "";
+      $("newItemKana").value = "";
+      saveState();
+      renderAll();
+    }
+
+    function addItemFromPanel(panelId) {
+      const nameInput = document.querySelector(`[data-direct-name="${panelId}"]`);
+      const kanaInput = document.querySelector(`[data-direct-kana="${panelId}"]`);
+      const name = nameInput?.value.trim();
+      const kana = kanaInput?.value.trim();
+
+      if (!name || !kana) {
+        alert("項目名とふりがなを両方入力してください。");
+        return;
+      }
+
+      const item = createItem(name, kana);
+      const panel = state.panels.find(p => p.id === panelId);
+      if (panel) panel.itemId = item.id;
+      saveState();
+      renderAll();
+    }
+
+    function editItem(id) {
+      const item = itemById(id);
+      if (!item) return;
+
+      const name = prompt("項目名", item.name);
+      if (!name || !name.trim()) return;
+
+      const kana = prompt("ふりがな", item.kana || item.name);
+      if (!kana || !kana.trim()) return;
+
+      const oldName = item.name;
+      item.name = name.trim();
+      item.kana = kana.trim();
+
+      if (confirm("過去の記録にも新しい項目名を反映しますか？")) {
+        state.logs.forEach(l => {
+          if (l.itemId === item.id || l.itemName === oldName) l.itemName = item.name;
+        });
+      }
+
       saveState();
       renderAll();
     }
 
     function deleteItem(id) {
-      const item = state.items.find(i => i.id === id);
+      const item = itemById(id);
       if (!item) return;
-      if (!confirm(`「${item.name}」を削除しますか？過去の記録は残ります。`)) return;
-      state.items = state.items.filter(i => i.id !== id);
-      saveState();
-      renderAll();
-    }
 
-    function renameItem(id) {
-      const item = state.items.find(i => i.id === id);
-      if (!item) return;
-      const name = prompt("新しい項目名", item.name);
-      if (!name || !name.trim()) return;
-      item.name = name.trim();
+      const isRunning = state.panels.some(p => p.itemId === id && p.runningSince);
+      if (isRunning) {
+        alert("計測中の項目は削除できません。先に終了してください。");
+        return;
+      }
+
+      if (!confirm(`「${item.name}」をプルダウンから削除しますか？過去の記録は残ります。`)) return;
+
+      state.items = state.items.filter(i => i.id !== id);
+      state.panels.forEach(p => {
+        if (p.itemId === id) {
+          p.itemId = null;
+          p.activeLogId = null;
+          p.lastLogId = null;
+        }
+      });
+
       saveState();
       renderAll();
     }
@@ -413,15 +705,31 @@
     function clearVisibleLogs() {
       const targetDate = $("dateFilter").value || dateKey();
       if (!confirm(`${targetDate} の記録を削除しますか？`)) return;
+
+      const removeIds = new Set(state.logs.filter(l => l.date === targetDate).map(l => l.id));
       state.logs = state.logs.filter(l => l.date !== targetDate);
+
+      state.panels.forEach(p => {
+        if (removeIds.has(p.activeLogId)) {
+          p.activeLogId = null;
+          p.runningSince = null;
+        }
+        if (removeIds.has(p.lastLogId)) p.lastLogId = null;
+      });
+
       saveState();
       renderAll();
     }
 
-    $("addBtn").addEventListener("click", addItem);
-    $("newItemName").addEventListener("keydown", e => {
-      if (e.key === "Enter") addItem();
+    $("addPanelBtn").addEventListener("click", () => addPanel(true));
+    $("openItemDialogBtn").addEventListener("click", () => {
+      renderItemManageList();
+      $("itemDialog").showModal();
     });
+    $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
+    $("addItemBtn").addEventListener("click", addItemFromDialog);
+    $("newItemKana").addEventListener("keydown", e => { if (e.key === "Enter") addItemFromDialog(); });
+
     $("todayBtn").addEventListener("click", () => {
       $("dateFilter").value = dateKey();
       renderLogs();
@@ -430,21 +738,33 @@
     $("csvBtn").addEventListener("click", exportCsv);
     $("clearLogsBtn").addEventListener("click", clearVisibleLogs);
 
+    document.body.addEventListener("change", e => {
+      const el = e.target;
+      if (el.dataset.selectPanel) changePanelItem(el.dataset.selectPanel, el.value);
+      if (el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
+      if (el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
+    });
+
     document.body.addEventListener("click", e => {
       const el = e.target;
-      if (el.dataset.start) startItem(el.dataset.start);
-      if (el.dataset.stop) stopItem(el.dataset.stop);
-      if (el.dataset.delete) deleteItem(el.dataset.delete);
-      if (el.dataset.rename) renameItem(el.dataset.rename);
+      if (el.dataset.start) startPanel(el.dataset.start);
+      if (el.dataset.stop) stopPanel(el.dataset.stop);
+      if (el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
+      if (el.dataset.directAdd) addItemFromPanel(el.dataset.directAdd);
+      if (el.dataset.editItem) editItem(el.dataset.editItem);
+      if (el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
     });
 
     $("dateFilter").value = dateKey();
+    saveState();
     renderAll();
+
     setInterval(() => {
-      state.items.forEach(item => {
-        if (!item.runningSince) return;
-        const node = document.querySelector(`[data-elapsed="${item.id}"]`);
-        if (node) node.textContent = durationText(Date.now() - new Date(item.runningSince).getTime());
+      state.panels.forEach(panel => {
+        if (!panel.runningSince) return;
+        const log = getPanelLog(panel);
+        const node = document.querySelector(`[data-elapsed="${panel.id}"]`);
+        if (node && log) node.textContent = durationText(Date.now() - new Date(log.start).getTime());
       });
     }, 1000);
   </script>
