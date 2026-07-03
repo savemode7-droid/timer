@@ -168,102 +168,65 @@
     }
 
   
-    /* compact colored v2 */
+    /* final compact work layout v5 */
     body {
       background: #eef2f7;
-      padding: env(safe-area-inset-top) 8px env(safe-area-inset-bottom);
+      padding: env(safe-area-inset-top) 7px env(safe-area-inset-bottom);
     }
     header {
-      padding: 8px 2px 4px;
+      padding: 7px 2px 3px;
     }
     h1 {
-      font-size: 20px;
+      font-size: 19px;
+      line-height: 1.2;
     }
     .sub {
       display: none;
     }
     .card {
-      padding: 8px;
-      margin: 8px 0;
-      border-radius: 12px;
-      box-shadow: 0 3px 10px rgba(0,0,0,.06);
+      padding: 7px;
+      margin: 7px 0;
+      border-radius: 11px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    }
+    .panel-list {
+      gap: 7px;
     }
     .timer-panel {
-      padding: 8px;
-      border-radius: 12px;
-      border: 2px solid #c7d2fe;
+      padding: 7px;
+      border-radius: 11px;
+      border: 2px solid #bfdbfe;
       background: #f8fafc;
     }
     .panel-head {
       background: #1e40af;
       color: #fff;
-      margin: -8px -8px 8px;
-      padding: 7px 9px;
-      border-radius: 10px 10px 0 0;
+      margin: -7px -7px 6px;
+      padding: 3px 8px;
+      border-radius: 9px 9px 0 0;
+      min-height: 24px;
     }
     .panel-title {
-      font-size: 14px;
+      font-size: 13px;
+      line-height: 1.2;
       color: #fff;
     }
     .panel-head .small {
-      color: #dbeafe;
+      display: none;
     }
-    .small {
+    .panel-head .danger {
+      padding: 3px 7px;
       font-size: 11px;
+      border-radius: 7px;
     }
     select, input {
-      font-size: 14px;
-      padding: 8px 9px;
-      border-radius: 9px;
-      border: 1px solid #cbd5e1;
-    }
-    .main-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .main-actions button {
-      font-size: 15px;
-      padding: 11px 8px;
-    }
-    button.start-btn {
-      background: #2563eb;
-      color: #fff;
-    }
-    button.end-btn {
-      background: #16a34a;
-      color: #fff;
-    }
-    .time-edit {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 7px;
-      margin: 8px 0 0;
-    }
-    .time-box {
-      background: #fff;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 6px;
-    }
-    .time-box label {
-      font-size: 11px;
-      color: #334155;
-      margin-bottom: 3px;
-    }
-    .time-box input {
-      padding: 7px 6px;
       font-size: 13px;
-      border-color: #e2e8f0;
-    }
-    .elapsed {
-      font-size: 22px;
-      margin: 7px 0 0;
-      color: #1e3a8a;
+      padding: 7px 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
     }
     details.inline-add {
-      margin-top: 8px;
+      margin: 0 0 6px;
       padding: 0;
       border: 0;
       background: transparent;
@@ -274,26 +237,84 @@
       display: inline-block;
       background: #e0f2fe;
       color: #0369a1;
-      padding: 7px 10px;
-      border-radius: 9px;
-      font-size: 13px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      font-size: 12px;
       font-weight: 700;
     }
     details.inline-add summary::-webkit-details-marker {
       display: none;
     }
     .inline-add-body {
-      margin-top: 6px;
-      padding: 8px;
-      border-radius: 10px;
+      margin-top: 5px;
+      padding: 7px;
+      border-radius: 9px;
       background: #fff;
       border: 1px dashed #93c5fd;
     }
-    button.plus {
-      width: 38px;
-      height: 38px;
+    .main-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-top: 7px;
+    }
+    .main-actions button {
+      font-size: 15px;
+      padding: 10px 8px;
+      border-radius: 9px;
+    }
+    button.start-btn {
+      background: #2563eb;
+      color: #fff;
+    }
+    button.end-btn {
+      background: #dc2626;
+      color: #fff;
+    }
+    .elapsed {
       font-size: 22px;
+      margin: 7px 0;
+      color: #1e3a8a;
+      line-height: 1.1;
+    }
+    .time-edit {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 6px 0 0;
+    }
+    .time-box {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      padding: 5px;
+    }
+    .time-box label {
+      font-size: 10px;
+      color: #334155;
+      margin-bottom: 3px;
+      font-weight: 700;
+    }
+    .time-box input {
+      padding: 6px 5px;
+      font-size: 12px;
+      border-color: #e2e8f0;
+    }
+    .toolbar {
+      gap: 5px;
+      margin-top: 6px;
+    }
+    button.plus {
+      width: 34px;
+      height: 34px;
+      font-size: 20px;
       background: #1e40af;
+      border-radius: 50%;
+    }
+    #openItemDialogBtn {
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 8px;
     }
     button.secondary {
       background: #dbeafe;
@@ -303,40 +324,49 @@
       background: #fee2e2;
       color: #b91c1c;
     }
-    .toolbar {
-      gap: 6px;
-      margin-top: 7px;
-    }
     .section-title {
-      font-size: 15px;
-      margin-bottom: 6px;
+      font-size: 14px;
+      margin-bottom: 5px;
       color: #1e40af;
     }
     table {
-      font-size: 12px;
+      font-size: 11px;
     }
     th {
       color: #1e40af;
       background: #eff6ff;
     }
     th, td {
-      padding: 6px 3px;
+      padding: 5px 3px;
     }
     .empty {
-      padding: 10px 3px;
-      font-size: 12px;
+      padding: 9px 3px;
+      font-size: 11px;
       color: #64748b;
     }
     .item-card {
-      padding: 8px;
+      padding: 7px;
       gap: 5px;
-      margin-top: 7px;
-      border-radius: 10px;
+      margin-top: 6px;
+      border-radius: 9px;
+    }
+    .dialog-body {
+      padding: 9px;
     }
     .dialog-title {
-      font-size: 16px;
+      font-size: 15px;
+      margin-bottom: 7px;
+    }
+    .stack {
+      gap: 5px;
+    }
+    .row {
+      gap: 5px;
     }
     @media (max-width: 420px) {
+      .time-edit {
+        grid-template-columns: 1fr 1fr;
+      }
       .actions button {
         flex: initial;
       }
@@ -563,11 +593,22 @@
           <div class="timer-panel">
             <div class="panel-head">
               <div>
-                <div class="panel-title">パネル ${index + 1}</div>
+                <div class="panel-title">作業${index + 1}</div>
                 <div class="small">${running ? "計測中: " + timeText(panelLog?.start || panel.runningSince) + "開始" : "停止中"}</div>
               </div>
               ${state.panels.length > 1 ? `<button class="danger" data-delete-panel="${panel.id}">削除</button>` : ""}
             </div>
+
+            <details class="inline-add">
+              <summary>＋ 項目を追加</summary>
+              <div class="inline-add-body">
+                <div class="stack">
+                  <input data-direct-name="${panel.id}" placeholder="項目名" ${running ? "disabled" : ""} />
+                  <input data-direct-kana="${panel.id}" placeholder="ふりがな" ${running ? "disabled" : ""} />
+                  <button class="secondary" data-direct-add="${panel.id}" ${running ? "disabled" : ""}>追加して選択</button>
+                </div>
+              </div>
+            </details>
 
             <select data-select-panel="${panel.id}" ${running ? "disabled" : ""}>
               ${options}
@@ -580,16 +621,6 @@
 
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
 
-            <details class="inline-add">
-              <summary>＋ 項目を追加</summary>
-              <div class="inline-add-body">
-                <div class="stack">
-                  <input data-direct-name="${panel.id}" placeholder="項目名" ${running ? "disabled" : ""} />
-                  <input data-direct-kana="${panel.id}" placeholder="ふりがな" ${running ? "disabled" : ""} />
-                  <button class="secondary" data-direct-add="${panel.id}" ${running ? "disabled" : ""}>追加して選択</button>
-                </div>
-              </div>
-            </details>
 
             <div class="time-edit">
               <div class="time-box">
