@@ -505,7 +505,190 @@
       margin: 7px 0 6px;
     }
 
-  </style>
+  
+    /* record and export separated v16 */
+    .date-row {
+      display: grid;
+      grid-template-columns: 1fr 64px;
+      gap: 7px;
+      align-items: center;
+      margin-bottom: 7px;
+    }
+    .date-row input {
+      width: 100%;
+      height: 34px;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+    .date-row button {
+      height: 34px;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+    .export-panel {
+      display: grid;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid #dbeafe;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .export-select-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .export-select-row select {
+      width: 100%;
+      max-width: none;
+      min-width: 0;
+      height: 34px;
+      font-size: 12px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+    }
+    .export-main {
+      width: 100%;
+      max-width: 220px;
+      justify-self: center;
+      height: 38px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 8px 10px;
+      border-radius: 9px;
+    }
+    .delete-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding-top: 2px;
+    }
+    .delete-subtle {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 999px;
+      min-width: 86px;
+      width: auto;
+      height: auto;
+      line-height: 1.1;
+    }
+    .delete-subtle:active {
+      transform: scale(.98);
+    }
+
+  
+/* v17 layout tweaks */
+.export-select-row{
+  display:grid;
+  grid-template-columns:1fr 1fr !important;
+}
+.export-select-row select{
+  width:100%;
+  min-width:0;
+}
+.export-main{
+  font-size:16px !important;
+  font-weight:700;
+  min-height:42px;
+}
+.record-actions{
+  display:flex;
+  justify-content:flex-end;
+  margin:4px 0 8px;
+}
+.delete-row{
+  justify-content:flex-end;
+}
+
+
+/* v18 panel delete and balanced export */
+.panel-delete-btn {
+  font-size: 11px !important;
+  padding: 3px 8px !important;
+  border-radius: 7px !important;
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+.export-panel {
+  display: grid;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid #dbeafe;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.export-select-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 8px;
+  width: 100%;
+}
+
+.export-select-row select {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 34px;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.export-button-row {
+  display: flex;
+  justify-content: center;
+}
+
+.export-main {
+  width: min(100%, 180px) !important;
+  height: 40px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 16px !important;
+  font-weight: 800;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.delete-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.delete-subtle {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  min-width: 86px;
+  width: auto;
+  height: auto;
+  line-height: 1.1;
+}
+
+.record-actions {
+  display: none !important;
+}
+
+</style>
 </head>
 <body>
   <header>
@@ -529,20 +712,30 @@
 
     <section class="card">
       <h2 class="section-title">記録</h2>
-      <div class="row">
+      <div class="date-row">
         <input id="dateFilter" type="date" />
         <button class="secondary" id="todayBtn">今日</button>
       </div>
-      <div class="toolbar">
-        <button class="ghost" id="csvBtn">CSV出力</button>
-        <button class="danger" id="clearLogsBtn">表示日の記録を削除</button>
-      </div>
-      <div class="toolbar month-toolbar">
-        <select id="monthFilter"></select>
-        <button class="ghost" id="monthCsvBtn">選択月CSV</button>
-        <button class="danger month-delete" id="clearMonthBtn">選択月を削除</button>
-      </div>
       <div id="logs"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">出力</h2>
+      <div class="export-panel">
+        <div class="export-select-row">
+          <select id="monthFilter"></select>
+          <select id="exportFormat">
+            <option value="csv">CSV</option>
+            <option value="excel">Excel</option>
+          </select>
+        </div>
+        <div class="export-button-row">
+          <button class="export-main" id="monthCsvBtn">出力</button>
+        </div>
+        <div class="delete-row">
+          <button class="delete-subtle" id="clearMonthBtn">選択月削除</button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -740,7 +933,7 @@
                 <div class="panel-title">作業${index + 1}</div>
                 <div class="small">${running ? "計測中: " + timeText(panelLog?.start || panel.runningSince) + "開始" : "停止中"}</div>
               </div>
-              ${state.panels.length > 1 ? `<button class="danger" data-delete-panel="${panel.id}">削除</button>` : ""}
+              <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
             </div>
 
             <div class="main-actions">
@@ -1091,50 +1284,28 @@
     }
 
     function exportCsv() {
-      const rows = [["日付","項目","開始時間","終了時間","分"]];
-      state.logs.forEach(l => {
-        rows.push([
-          l.date,
-          l.itemName,
-          timeText(l.start),
-          timeText(l.end),
-          Math.round(l.durationMs / 60000)
-        ]);
-      });
-      const csv = rows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `作業タイマー記録_${dateKey()}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const format = $("exportFormat")?.value || "csv";
+      const logs = [...state.logs].sort((a,b) => new Date(a.start) - new Date(b.start));
+
+      if (format === "excel") {
+        exportExcelFile(logs, `作業タイマー記録_${dateKey()}.xls`);
+      } else {
+        exportCsvFile(logs, `作業タイマー記録_${dateKey()}.csv`);
+      }
     }
 
     function exportMonthCsv() {
       const targetMonth = $("monthFilter")?.value || monthKey();
-      const rows = [["日付","項目","開始時間","終了時間","分"]];
-      state.logs
+      const format = $("exportFormat")?.value || "csv";
+      const logs = state.logs
         .filter(l => (l.date || dateKey(new Date(l.start))).slice(0, 7) === targetMonth)
-        .sort((a,b) => new Date(a.start) - new Date(b.start))
-        .forEach(l => {
-          rows.push([
-            l.date,
-            l.itemName,
-            timeText(l.start),
-            timeText(l.end),
-            Math.round(l.durationMs / 60000)
-          ]);
-        });
+        .sort((a,b) => new Date(a.start) - new Date(b.start));
 
-      const csv = rows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `作業タイマー記録_${targetMonth}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      if (format === "excel") {
+        exportExcelFile(logs, `作業タイマー記録_${targetMonth}.xls`);
+      } else {
+        exportCsvFile(logs, `作業タイマー記録_${targetMonth}.csv`);
+      }
     }
 
     function clearMonthLogs() {
@@ -1161,6 +1332,89 @@
 
       saveState();
       renderAll();
+    }
+
+
+
+    function exportCsvFile(logs, filename) {
+      const rows = [["日付","項目","開始時間","終了時間","分"]];
+      [...logs]
+        .sort((a,b) => new Date(a.start) - new Date(b.start))
+        .forEach(l => {
+          rows.push([
+            l.date,
+            l.itemName,
+            timeText(l.start),
+            timeText(l.end),
+            Math.round(l.durationMs / 60000)
+          ]);
+        });
+
+      const csv = rows
+        .map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(","))
+        .join("\n");
+
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeExcelCell(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function exportExcelFile(logs, filename) {
+      const sorted = [...logs].sort((a,b) => new Date(a.start) - new Date(b.start));
+
+      const rows = sorted.map(l => `
+        <tr>
+          <td>${escapeExcelCell(l.date)}</td>
+          <td>${escapeExcelCell(l.itemName)}</td>
+          <td>${escapeExcelCell(timeText(l.start))}</td>
+          <td>${escapeExcelCell(timeText(l.end))}</td>
+          <td style="mso-number-format:'0';">${Math.round(l.durationMs / 60000)}</td>
+        </tr>
+      `).join("");
+
+      const htmlTable = `
+        <html>
+        <head>
+          <meta charset="utf-8">
+        </head>
+        <body>
+          <table border="1">
+            <thead>
+              <tr>
+                <th>日付</th>
+                <th>項目</th>
+                <th>開始時間</th>
+                <th>終了時間</th>
+                <th>分</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+
+      const blob = new Blob(["\uFEFF" + htmlTable], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     function clearVisibleLogs() {
@@ -1196,8 +1450,7 @@
       renderLogs();
     });
     $("dateFilter").addEventListener("change", renderLogs);
-    $("csvBtn").addEventListener("click", exportCsv);
-    $("clearLogsBtn").addEventListener("click", clearVisibleLogs);
+    $("clearLogsBtn")?.addEventListener("click", clearVisibleLogs);
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
     $("clearMonthBtn").addEventListener("click", clearMonthLogs);
     $("monthFilter").addEventListener("change", () => saveState());
