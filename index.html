@@ -375,6 +375,30 @@
       }
     }
 
+  
+    /* monthly export controls */
+    #monthFilter {
+      max-width: 140px;
+      font-size: 12px;
+      padding: 6px 7px;
+    }
+    #monthCsvBtn, #clearMonthBtn {
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+  
+    /* safer monthly delete layout */
+    .month-toolbar {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .month-delete {
+      margin-left: auto;
+    }
+
   </style>
 </head>
 <body>
@@ -406,6 +430,11 @@
       <div class="toolbar">
         <button class="ghost" id="csvBtn">CSV出力</button>
         <button class="danger" id="clearLogsBtn">表示日の記録を削除</button>
+      </div>
+      <div class="toolbar month-toolbar">
+        <select id="monthFilter"></select>
+        <button class="ghost" id="monthCsvBtn">選択月CSV</button>
+        <button class="danger month-delete" id="clearMonthBtn">選択月を削除</button>
       </div>
       <div id="logs"></div>
     </section>
@@ -507,6 +536,15 @@
 
     function dateKey(d = new Date()) {
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    }
+
+    function monthKey(d = new Date()) {
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+    }
+
+    function monthLabel(key) {
+      const [y, m] = key.split("-");
+      return `${Number(y)}年${Number(m)}月`;
     }
 
     function timeText(iso) {
@@ -681,16 +719,37 @@
         : `<div class="empty">今日の記録はまだありません。</div>`;
     }
 
+    function renderMonthFilter() {
+      const select = $("monthFilter");
+      if (!select) return;
+
+      const months = [...new Set(state.logs.map(l => (l.date || dateKey(new Date(l.start))).slice(0, 7)))]
+        .filter(Boolean)
+        .sort();
+
+      const current = select.value || monthKey();
+
+      if (!months.includes(monthKey())) months.push(monthKey());
+      months.sort();
+
+      select.innerHTML = months.map(m =>
+        `<option value="${m}">${monthLabel(m)}</option>`
+      ).join("");
+
+      select.value = months.includes(current) ? current : monthKey();
+    }
+
     function renderLogs() {
       const targetDate = $("dateFilter").value || dateKey();
-      const logs = state.logs.filter(l => l.date === targetDate).sort((a,b) => new Date(b.start) - new Date(a.start));
+      const logs = state.logs.filter(l => l.date === targetDate).sort((a,b) => new Date(a.start) - new Date(b.start));
 
       $("logs").innerHTML = logs.length
-        ? `<table><thead><tr><th>項目</th><th>時間</th><th class="right">作業時間</th></tr></thead><tbody>` +
+        ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th></tr></thead><tbody>` +
           logs.map(l => `
             <tr>
               <td>${escapeHtml(l.itemName)}</td>
-              <td>${timeText(l.start)}-${timeText(l.end)}</td>
+              <td>${timeText(l.start)}</td>
+              <td>${timeText(l.end)}</td>
               <td class="right">${durationJa(l.durationMs)}</td>
             </tr>`).join("") +
           `</tbody></table>`
@@ -701,6 +760,7 @@
       renderPanels();
       renderItemManageList();
       renderSummary();
+      renderMonthFilter();
       renderLogs();
     }
 
@@ -737,17 +797,26 @@
       if (!item) return;
 
       const now = new Date().toISOString();
-      const log = {
-        id: crypto.randomUUID(),
-        itemId: item.id,
-        itemName: item.name,
-        start: now,
-        end: now,
-        date: dateKey(new Date(now)),
-        durationMs: 0
-      };
 
-      state.logs.push(log);
+      let log = logById(panel.lastLogId);
+
+      if (log && log.itemId === item.id && !panel.runningSince) {
+        // 終了後に同じパネルで開始した場合は、同じ記録を続行する。
+        log.end = now;
+        recalcLog(log);
+      } else {
+        log = {
+          id: crypto.randomUUID(),
+          itemId: item.id,
+          itemName: item.name,
+          start: now,
+          end: now,
+          date: dateKey(new Date(now)),
+          durationMs: 0
+        };
+        state.logs.push(log);
+      }
+
       panel.runningSince = now;
       panel.activeLogId = log.id;
       panel.lastLogId = log.id;
@@ -890,7 +959,7 @@
     }
 
     function exportCsv() {
-      const rows = [["日付","項目","開始","終了","分"]];
+      const rows = [["日付","項目","開始時間","終了時間","分"]];
       state.logs.forEach(l => {
         rows.push([
           l.date,
@@ -908,6 +977,58 @@
       a.download = `作業タイマー記録_${dateKey()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function exportMonthCsv() {
+      const targetMonth = $("monthFilter")?.value || monthKey();
+      const rows = [["日付","項目","開始時間","終了時間","分"]];
+      state.logs
+        .filter(l => (l.date || dateKey(new Date(l.start))).slice(0, 7) === targetMonth)
+        .sort((a,b) => new Date(a.start) - new Date(b.start))
+        .forEach(l => {
+          rows.push([
+            l.date,
+            l.itemName,
+            timeText(l.start),
+            timeText(l.end),
+            Math.round(l.durationMs / 60000)
+          ]);
+        });
+
+      const csv = rows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `作業タイマー記録_${targetMonth}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearMonthLogs() {
+      const targetMonth = $("monthFilter")?.value || monthKey();
+      if (!confirm(`${monthLabel(targetMonth)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return;
+
+      const removeIds = new Set(
+        state.logs
+          .filter(l => (l.date || dateKey(new Date(l.start))).slice(0, 7) === targetMonth)
+          .map(l => l.id)
+      );
+
+      state.logs = state.logs.filter(l =>
+        (l.date || dateKey(new Date(l.start))).slice(0, 7) !== targetMonth
+      );
+
+      state.panels.forEach(p => {
+        if (removeIds.has(p.activeLogId)) {
+          p.activeLogId = null;
+          p.runningSince = null;
+        }
+        if (removeIds.has(p.lastLogId)) p.lastLogId = null;
+      });
+
+      saveState();
+      renderAll();
     }
 
     function clearVisibleLogs() {
@@ -945,6 +1066,9 @@
     $("dateFilter").addEventListener("change", renderLogs);
     $("csvBtn").addEventListener("click", exportCsv);
     $("clearLogsBtn").addEventListener("click", clearVisibleLogs);
+    $("monthCsvBtn").addEventListener("click", exportMonthCsv);
+    $("clearMonthBtn").addEventListener("click", clearMonthLogs);
+    $("monthFilter").addEventListener("change", () => saveState());
 
     document.body.addEventListener("change", e => {
       const el = e.target;
