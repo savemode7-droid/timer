@@ -399,6 +399,112 @@
       margin-left: auto;
     }
 
+  
+    /* dropdown and item manager compact v8 */
+    select {
+      font-size: 12px;
+      padding: 5px 7px;
+      min-height: 30px;
+    }
+    select option {
+      font-size: 12px;
+      padding: 2px 4px;
+    }
+    #itemDialog {
+      width: min(96vw, 520px);
+    }
+    #itemDialog .dialog-body {
+      padding: 7px;
+    }
+    #itemDialog .dialog-title {
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+    #itemDialog input {
+      font-size: 12px;
+      padding: 6px 7px;
+      border-radius: 7px;
+    }
+    #itemDialog button {
+      font-size: 11px;
+      padding: 5px 7px;
+      border-radius: 7px;
+    }
+    #addItemBtn,
+    #closeDialogBtn {
+      font-size: 11px;
+      padding: 5px 7px;
+    }
+    .item-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 6px;
+      margin-top: 4px;
+      border-radius: 7px;
+      min-height: 30px;
+    }
+    .item-line {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .item-name {
+      font-size: 12px;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-kana {
+      font-size: 10px;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .mini-btn {
+      font-size: 10px !important;
+      padding: 4px 6px !important;
+      border-radius: 6px !important;
+      line-height: 1.1;
+    }
+    #itemManageList .empty {
+      padding: 6px 2px;
+      font-size: 11px;
+    }
+    .inline-add-body input {
+      font-size: 12px;
+      padding: 6px 7px;
+    }
+    .inline-add-body button {
+      font-size: 11px;
+      padding: 6px 7px;
+    }
+
+  
+    /* timer-first layout v9 */
+    .bottom-add {
+      margin-top: 7px !important;
+      margin-bottom: 5px !important;
+    }
+    .timer-panel > select[data-select-panel] {
+      margin-top: 0;
+    }
+    .main-actions {
+      margin-top: 0;
+    }
+    .elapsed {
+      margin: 7px 0 6px;
+    }
+
   </style>
 </head>
 <body>
@@ -637,23 +743,8 @@
               ${state.panels.length > 1 ? `<button class="danger" data-delete-panel="${panel.id}">削除</button>` : ""}
             </div>
 
-            <details class="inline-add">
-              <summary>＋ 項目を追加</summary>
-              <div class="inline-add-body">
-                <div class="stack">
-                  <input data-direct-name="${panel.id}" placeholder="項目名" ${running ? "disabled" : ""} />
-                  <input data-direct-kana="${panel.id}" placeholder="ふりがな" ${running ? "disabled" : ""} />
-                  <button class="secondary" data-direct-add="${panel.id}" ${running ? "disabled" : ""}>追加して選択</button>
-                </div>
-              </div>
-            </details>
-
-            <select data-select-panel="${panel.id}" ${running ? "disabled" : ""}>
-              ${options}
-            </select>
-
             <div class="main-actions">
-              <button class="start-btn" data-start="${panel.id}" ${running || !item ? "disabled" : ""}>開始</button>
+              <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
               <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
             </div>
 
@@ -670,6 +761,21 @@
                 <input type="datetime-local" data-end-time="${panel.id}" value="${dateTimeLocalValue(panelLog?.end)}" ${!panelLog ? "disabled" : ""} />
               </div>
             </div>
+
+            <details class="inline-add bottom-add">
+              <summary>＋ 項目を追加</summary>
+              <div class="inline-add-body">
+                <div class="stack">
+                  <input data-direct-name="${panel.id}" placeholder="項目名" ${running ? "disabled" : ""} />
+                  <input data-direct-kana="${panel.id}" placeholder="ふりがな" ${running ? "disabled" : ""} />
+                  <button class="secondary" data-direct-add="${panel.id}" ${running ? "disabled" : ""}>追加して選択</button>
+                </div>
+              </div>
+            </details>
+
+            <select data-select-panel="${panel.id}">
+              ${options}
+            </select>
 
           </div>
         `;
@@ -692,13 +798,13 @@
 
       area.innerHTML = items.map(item => `
         <div class="item-card">
-          <div>
-            <div class="item-name">${escapeHtml(item.name)}</div>
-            <div class="item-kana">${escapeHtml(item.kana)}</div>
+          <div class="item-line">
+            <span class="item-name">${escapeHtml(item.name)}</span>
+            <span class="item-kana">${escapeHtml(item.kana)}</span>
           </div>
-          <div class="actions">
-            <button class="ghost" data-edit-item="${item.id}">編集</button>
-            <button class="danger" data-delete-item="${item.id}">削除</button>
+          <div class="item-actions">
+            <button class="ghost mini-btn" data-edit-item="${item.id}">編集</button>
+            <button class="danger mini-btn" data-delete-item="${item.id}">削除</button>
           </div>
         </div>
       `).join("");
@@ -781,34 +887,45 @@
 
     function changePanelItem(panelId, itemId) {
       const panel = state.panels.find(p => p.id === panelId);
-      if (!panel || panel.runningSince) return;
+      if (!panel) return;
+
       panel.itemId = itemId || null;
-      panel.lastLogId = null;
-      panel.activeLogId = null;
+
+      const item = itemById(panel.itemId);
+      const log = getPanelLog(panel);
+
+      // 計測中または直近の記録がある場合、後から選んだ項目を記録にも反映する。
+      if (log && item) {
+        log.itemId = item.id;
+        log.itemName = item.name;
+      }
+
       saveState();
       renderAll();
     }
 
     function startPanel(id) {
       const panel = state.panels.find(p => p.id === id);
-      if (!panel || !panel.itemId) return;
+      if (!panel) return;
 
       const item = itemById(panel.itemId);
-      if (!item) return;
-
       const now = new Date().toISOString();
 
       let log = logById(panel.lastLogId);
 
-      if (log && log.itemId === item.id && !panel.runningSince) {
+      if (log && !panel.runningSince) {
         // 終了後に同じパネルで開始した場合は、同じ記録を続行する。
+        if (item) {
+          log.itemId = item.id;
+          log.itemName = item.name;
+        }
         log.end = now;
         recalcLog(log);
       } else {
         log = {
           id: crypto.randomUUID(),
-          itemId: item.id,
-          itemName: item.name,
+          itemId: item ? item.id : null,
+          itemName: item ? item.name : "未分類",
           start: now,
           end: now,
           date: dateKey(new Date(now)),
@@ -820,6 +937,14 @@
       panel.runningSince = now;
       panel.activeLogId = log.id;
       panel.lastLogId = log.id;
+
+      // 開始したら、次の作業をすぐ始められるように空パネルを1つ自動追加する。
+      const hasEmptyPanel = state.panels.some(p =>
+        p.id !== panel.id && !p.runningSince && !p.itemId && !p.activeLogId && !p.lastLogId
+      );
+      if (!hasEmptyPanel) {
+        state.panels.push({ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null });
+      }
 
       saveState();
       renderAll();
@@ -904,7 +1029,14 @@
 
       const item = createItem(name, kana);
       const panel = state.panels.find(p => p.id === panelId);
-      if (panel) panel.itemId = item.id;
+      if (panel) {
+        panel.itemId = item.id;
+        const log = getPanelLog(panel);
+        if (log) {
+          log.itemId = item.id;
+          log.itemName = item.name;
+        }
+      }
       saveState();
       renderAll();
     }
