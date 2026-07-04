@@ -1,4 +1,4 @@
-// Timer App app.js v38.4
+// Timer App app.js v38.5
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -212,7 +212,7 @@
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
               <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
-              <button class="green complete-btn" data-complete="${panel.id}" ${!canComplete ? "disabled" : ""}>完了</button>
+              <button class="green complete-btn" data-complete-panel="${panel.id}" ${!canComplete ? "disabled" : ""}>完了</button>
             </div>
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
           `;
@@ -533,11 +533,41 @@ function renderItemManageList() {
     }
 
     function completePanel(id) {
-      const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
+      const panel = state.panels.find(p=>p.id===id);
+      if (!panel || panel.running || panel.completed) return;
+
+      // v38.5: 定型作業は「完了」しても完了グループへ移動しない。
+      // 記録は開始→終了で作成済みなので、完了時は手入力だけクリアして次回利用状態に戻す。
+      if (panel.itemId) {
+        const log = panel.lastLogId ? logById(panel.lastLogId) : null;
+        if (log) {
+          log.completed = true;
+          log.itemId = panel.itemId || null;
+          log.customName = panel.customName || "";
+          log.itemName = buildItemName(panel);
+          log.panelId = null;
+          recalcLog(log);
+        }
+        panel.customName = "";
+        panel.start = null;
+        panel.end = null;
+        panel.running = false;
+        panel.completed = false;
+        panel.collapsed = false;
+        panel.activeLogId = null;
+        panel.lastLogId = null;
+        panel.linkedToLog = false;
+        saveState();
+        renderAll();
+        return;
+      }
+
       panel.completed = true;
       panel.collapsed = true;
       panel.activeLogId = null;
-      saveState(); renderAll();
+      updateLogFromPanel(panel);
+      saveState();
+      renderAll();
     }
 
     function updatePanelTime(panelId, field, value) {
@@ -614,9 +644,9 @@ function renderItemManageList() {
         if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
         return;
       }
-      const toggleGroup = el.closest("[data-toggle-panel-group]");
+      const toggleGroup = el.closest("[data-toggle-group]");
       if (toggleGroup) {
-        togglePanelGroup(toggleGroup.dataset.togglePanelGroup);
+        togglePanelGroup(toggleGroup.dataset.toggleGroup);
         return;
       }
       if(el.dataset.start) startPanel(el.dataset.start);
