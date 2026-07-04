@@ -1,4 +1,4 @@
-// Timer App app.js v37.3
+// Timer App app.js v38
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -19,7 +19,7 @@
 
     function newPanel() {
       const id = crypto.randomUUID();
-      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:false, date:dateKey() };
+      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:false, date:dateKey(), activeLogId:null, lastLogId:null, linkedToLog:false };
     }
 
     function loadState() {
@@ -66,7 +66,10 @@
             running: !!(p.running || p.runningSince),
             completed: !!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed),
             collapsed: (p.collapsed !== undefined) ? !!p.collapsed : (!!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed)),
-            date: p.date || (start ? dateKey(new Date(start)) : dateKey())
+            date: p.date || (start ? dateKey(new Date(start)) : dateKey()),
+            activeLogId: p.activeLogId || null,
+            lastLogId: p.lastLogId || linkedLog?.id || null,
+            linkedToLog: (p.linkedToLog !== undefined) ? !!p.linkedToLog : (!p.itemId && !!linkedLog)
           };
         });
       }
@@ -79,12 +82,16 @@
 
     function ensureLogLinks(target = state) {
       target.panels.forEach(panel => {
-        if (!panel.start) return;
-        let log = target.logs.find(l => l.id === panel.id || l.panelId === panel.id);
+        // v38: 記録との連動は「手入力のみ・未分類」カードだけに限定する。
+        // 項目選択ありカードは、開始のたびにカード非連動の記録を作成する。
+        const shouldLink = !!panel.linkedToLog || (!panel.itemId && !!panel.start);
+        if (!shouldLink || !panel.start) return;
+
+        let log = target.logs.find(l => l.panelId === panel.id || l.id === panel.id);
         const itemName = buildItemName(panel, target.items);
         const end = panel.running ? nowIso() : (panel.end || panel.start);
         if (!log) {
-          log = { id: panel.id, panelId: panel.id, itemId: panel.itemId, customName: panel.customName || "", itemName, start: panel.start, end, date: panel.date || dateKey(new Date(panel.start)), durationMs:0, completed:panel.completed };
+          log = { id: panel.id, panelId: panel.id, itemId: panel.itemId || null, customName: panel.customName || "", itemName, start: panel.start, end, date: panel.date || dateKey(new Date(panel.start)), durationMs:0, completed:panel.completed };
           target.logs.push(log);
         }
         log.id = panel.id;
@@ -97,6 +104,9 @@
         log.date = panel.date || dateKey(new Date(panel.start));
         log.completed = !!panel.completed;
         recalcLog(log);
+        panel.linkedToLog = true;
+        panel.lastLogId = log.id;
+        if (panel.running) panel.activeLogId = log.id;
       });
     }
 
@@ -147,7 +157,17 @@
       const endOfOldDay = new Date(y, m-1, d, 23, 59, 59, 0).toISOString();
       state.panels.forEach(panel => {
         if (panel.start) {
-          if (panel.running) panel.end = endOfOldDay;
+          if (panel.running) {
+            panel.end = endOfOldDay;
+            const log = panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
+            if (log) {
+              log.end = panel.end;
+              log.completed = !panel.itemId;
+              recalcLog(log);
+              panel.lastLogId = log.id;
+            }
+            panel.activeLogId = null;
+          }
           panel.running = false;
           panel.completed = true;
           panel.collapsed = true;
@@ -199,10 +219,13 @@
         const running = !!panel.running;
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
+        const canComplete = !!panel.itemId && !!panel.start && !running;
+        const completeButton = panel.itemId ? `<button class="complete-btn" data-complete-panel="${panel.id}" ${canComplete ? "" : "disabled"}>完了</button>` : "";
         const actionControls = completed ? `` : `
-            <div class="main-actions">
+            <div class="main-actions ${panel.itemId ? "three-actions" : ""}">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
               <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
+              ${completeButton}
             </div>
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
           `;
@@ -262,7 +285,12 @@
 
     function currentLogsForCalc() {
       ensureLogLinks();
-      return state.logs.map(l => ({...l, end: (state.panels.find(p=>p.id===l.id)?.running ? nowIso() : l.end)})).map(l => { recalcLog(l); return l; });
+      return state.logs.map(l => {
+        const runningPanel = state.panels.find(p => p.running && p.activeLogId === l.id);
+        const copy = {...l, end: runningPanel ? nowIso() : l.end};
+        recalcLog(copy);
+        return copy;
+      });
     }
 
     function startOfWeekMonday(d) {
@@ -320,7 +348,7 @@
       $("logs").innerHTML = logs.length
         ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th><th class="log-action-cell">操作</th></tr></thead><tbody>` +
           logs.map(l=>{
-            const hasPanel = state.panels.some(p => p.id === l.id || p.id === l.panelId);
+            const hasPanel = !!l.panelId && state.panels.some(p => p.id === l.panelId);
             const action = hasPanel
               ? `<button class="log-icon-btn locked" data-log-locked="${l.id}" title="作業パネルがあるため削除できません">🔒</button>`
               : `<button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
@@ -337,17 +365,22 @@
     function deletePanel(id) {
       const panel = state.panels.find(p=>p.id===id);
       if (!panel) return;
-      const hasLog = !!logById(id);
-      const msg = hasLog ? "この作業パネルと、このパネルに紐づく記録1件を削除します。よろしいですか？" : "この作業パネルを削除しますか？";
+      const linkedLogs = state.logs.filter(l => l.panelId === id);
+      const hasLinkedLog = linkedLogs.length > 0;
+      const msg = hasLinkedLog
+        ? "この作業パネルと、このパネルに紐づく記録を削除します。よろしいですか？"
+        : "この作業パネルを削除しますか？記録は残ります。";
       if (!confirm(msg)) return;
       state.panels = state.panels.filter(p=>p.id!==id);
-      state.logs = state.logs.filter(l=>l.id!==id && l.panelId!==id);
+      // v38: 項目選択ありカードの記録はカード非連動なので消さない。
+      // 手入力のみ・未分類カードの連動記録だけ消す。
+      if (hasLinkedLog) state.logs = state.logs.filter(l=>l.panelId!==id);
       if (!state.panels.length) state.panels.push(newPanel());
       saveState(); renderAll();
     }
 
     function deleteLog(id) {
-      const hasPanel = state.panels.some(p => p.id === id);
+      const hasPanel = state.logs.some(l => (l.id === id || l.panelId === id) && l.panelId && state.panels.some(p => p.id === l.panelId));
       if (hasPanel) {
         alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
         return;
@@ -372,7 +405,16 @@
       renderAll();
     }
 
-    function updateLogFromPanel(panel) { ensureLogLinks(); }
+    function updateLogFromPanel(panel) {
+      ensureLogLinks();
+      const log = panel.activeLogId ? logById(panel.activeLogId) : null;
+      if (log) {
+        log.itemId = panel.itemId || null;
+        log.customName = panel.customName || "";
+        log.itemName = buildItemName(panel);
+        recalcLog(log);
+      }
+    }
 
     function changePanelItem(panelId, itemId) {
       const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
@@ -396,13 +438,32 @@
     function startPanel(id) {
       const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
       const now = nowIso();
-      panel.start = panel.start || now;
+      const linkedToLog = !panel.itemId;
+      const logId = linkedToLog ? panel.id : crypto.randomUUID();
+      const log = {
+        id: logId,
+        panelId: linkedToLog ? panel.id : null,
+        itemId: panel.itemId || null,
+        customName: panel.customName || "",
+        itemName: buildItemName(panel),
+        start: now,
+        end: now,
+        date: dateKey(new Date(now)),
+        durationMs: 0,
+        completed: false
+      };
+      state.logs.push(log);
+
+      panel.start = now;
       panel.end = now;
       panel.running = true;
       panel.completed = false;
       panel.collapsed = false;
       panel.date = dateKey(new Date(panel.start));
-      ensureLogLinks();
+      panel.activeLogId = log.id;
+      panel.lastLogId = log.id;
+      panel.linkedToLog = linkedToLog;
+
       const hasEmpty = state.panels.some(p=>p.id!==panel.id && !p.start && !p.itemId && !p.customName);
       if (!hasEmpty) state.panels.push(newPanel());
       saveState(); renderAll();
@@ -412,9 +473,37 @@
       const panel = state.panels.find(p=>p.id===id); if (!panel || !panel.running) return;
       panel.end = nowIso();
       panel.running = false;
+
+      const log = panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
+      if (log) {
+        log.end = panel.end;
+        log.itemId = panel.itemId || null;
+        log.customName = panel.customName || "";
+        log.itemName = buildItemName(panel);
+        log.completed = !panel.itemId;
+        recalcLog(log);
+        panel.lastLogId = log.id;
+      }
+      panel.activeLogId = null;
+
+      if (panel.itemId) {
+        // v38: 定番項目カードは終了後も作業側に残し、再開始できる。
+        panel.completed = false;
+        panel.collapsed = false;
+      } else {
+        // v38: 手入力のみ・未分類カードは終了時に完了へ移動し、記録と連動する。
+        panel.completed = true;
+        panel.collapsed = true;
+        panel.linkedToLog = true;
+      }
+      saveState(); renderAll();
+    }
+
+    function completePanel(id) {
+      const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
       panel.completed = true;
       panel.collapsed = true;
-      ensureLogLinks();
+      panel.activeLogId = null;
       saveState(); renderAll();
     }
 
@@ -428,6 +517,13 @@
         if (!panel.end || new Date(panel.end) < new Date(panel.start)) panel.end = panel.start;
       } else {
         panel.end = iso;
+      }
+      const log = panel.activeLogId ? logById(panel.activeLogId) : (panel.linkedToLog ? logById(panel.id) : logById(panel.lastLogId));
+      if (log) {
+        log.start = panel.start;
+        log.end = panel.end || panel.start;
+        log.date = dateKey(new Date(log.start));
+        recalcLog(log);
       }
       ensureLogLinks(); saveState(); renderAll();
     }
@@ -477,6 +573,7 @@
       if (el.closest("button")) {
         if(el.dataset.start) startPanel(el.dataset.start);
         if(el.dataset.stop) stopPanel(el.dataset.stop);
+        if(el.dataset.completePanel) completePanel(el.dataset.completePanel);
         if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
         if(el.dataset.deleteLog) deleteLog(el.dataset.deleteLog);
         if(el.dataset.logLocked) showLockedLogMessage();
@@ -491,6 +588,7 @@
       }
       if(el.dataset.start) startPanel(el.dataset.start);
       if(el.dataset.stop) stopPanel(el.dataset.stop);
+        if(el.dataset.completePanel) completePanel(el.dataset.completePanel);
       if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
       if(el.dataset.deleteLog) deleteLog(el.dataset.deleteLog);
       if(el.dataset.logLocked) showLockedLogMessage();
@@ -510,7 +608,7 @@
         if (!panel.running || !panel.start) return;
         const node=document.querySelector(`[data-elapsed="${panel.id}"]`);
         if(node) node.textContent = durationText(Date.now() - new Date(panel.start).getTime());
-        const log=logById(panel.id);
+        const log=panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
         if(log){ log.end=nowIso(); recalcLog(log); changed=true; }
       });
       if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));

@@ -1,4 +1,4 @@
-/* Timer App style.css v37.3 */
+/* Timer App style.css v38 */
 
 :root {
       --bg: #f6f7f9;
@@ -1028,4 +1028,25 @@
 }
 .panel-group-head + .timer-panel {
   margin-top: 0;
+}
+
+
+/* v38: complete button for reusable item cards */
+.main-actions.three-actions {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+button.complete-btn {
+  background: #475569;
+  color: #fff;
+}
+button.complete-btn:disabled {
+  opacity: .45;
+}
+@media (max-width: 360px) {
+  .main-actions.three-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .main-actions.three-actions .complete-btn {
+    grid-column: 1 / -1;
+  }
 }
