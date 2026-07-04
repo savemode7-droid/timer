@@ -1,14 +1,16 @@
 <!--
 ==================================================
 作業タイマー
-Version : v33-20260704-1635
-Base    : v32
-Date    : 2026-07-04 16:35
+Version : v35-20260704-1645
+Base    : v33
+Date    : 2026-07-04 16:45
 
 Changes
-- 合計パネルを「今日・今週・今月」の1行表示に変更
-- 記録・合計・出力の見出しを作業パネルと同じ青い帯に変更
-- v32の記録日最上部配置、パネル＝ログ1件、完了パネル1行表示を維持
+- 記録一覧に操作列を追加
+- 対応する作業パネルが存在する記録はロック表示に変更
+- パネルが存在しない記録は削除ボタンで削除可能に変更
+- 合計パネルを「今日・今週・今月」の1行セル表示に変更
+- ラベル部分を灰色、時間部分を白色に変更
 ==================================================
 -->
 <!doctype html>
@@ -916,13 +918,79 @@ Changes
   display: inline-block;
 }
 
+
+/* v35: summary cells and record action buttons */
+.period-summary.cell-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  overflow-x: auto;
+  white-space: nowrap;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.summary-cell-label {
+  background: #e5e7eb;
+  color: #334155;
+  padding: 7px 6px;
+  border-right: 1px solid #cbd5e1;
+}
+.summary-cell-value {
+  background: #fff;
+  color: #1e40af;
+  padding: 7px 7px;
+  border-right: 1px solid #cbd5e1;
+  min-width: 58px;
+}
+.summary-cell-value:last-child {
+  border-right: 0;
+}
+.log-action-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+.log-icon-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.log-icon-btn.locked {
+  background: #e5e7eb !important;
+  color: #64748b !important;
+}
+.log-icon-btn.delete-log {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+@media (max-width: 420px) {
+  .period-summary.cell-line {
+    font-size: 10px;
+  }
+  .summary-cell-label,
+  .summary-cell-value {
+    padding: 6px 5px;
+  }
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v33-20260704-1635</span>
+      <span class="app-version">v35-20260704-1645</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -1254,10 +1322,10 @@ Changes
         .reduce((sum, l) => sum + l.durationMs, 0);
 
       $("summary").innerHTML = `
-        <div class="period-summary one-line">
-          <span>今日 ${durationJa(todayTotal)}</span>
-          <span>今週 ${durationJa(weekTotal)}</span>
-          <span>今月 ${durationJa(monthTotal)}</span>
+        <div class="period-summary cell-line">
+          <span class="summary-cell-label">今日</span><span class="summary-cell-value">${durationJa(todayTotal)}</span>
+          <span class="summary-cell-label">今週</span><span class="summary-cell-value">${durationJa(weekTotal)}</span>
+          <span class="summary-cell-label">今月</span><span class="summary-cell-value">${durationJa(monthTotal)}</span>
         </div>`;
     }
 
@@ -1274,7 +1342,17 @@ Changes
     function renderLogs() {
       const targetDate = $("dateFilter").value || dateKey();
       const logs = currentLogsForCalc().filter(l=>l.date===targetDate).sort((a,b)=>new Date(a.start)-new Date(b.start));
-      $("logs").innerHTML = logs.length ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th></tr></thead><tbody>` + logs.map(l=>`<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td></tr>`).join("") + `</tbody></table>` : `<div class="empty">この日の記録はありません。</div>`;
+      $("logs").innerHTML = logs.length
+        ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th><th class="log-action-cell">操作</th></tr></thead><tbody>` +
+          logs.map(l=>{
+            const hasPanel = state.panels.some(p => p.id === l.id || p.id === l.panelId);
+            const action = hasPanel
+              ? `<button class="log-icon-btn locked" data-log-locked="${l.id}" title="作業パネルがあるため削除できません">🔒</button>`
+              : `<button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
+            return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
+          }).join("") +
+          `</tbody></table>`
+        : `<div class="empty">この日の記録はありません。</div>`;
     }
 
     function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
@@ -1291,6 +1369,24 @@ Changes
       state.logs = state.logs.filter(l=>l.id!==id && l.panelId!==id);
       if (!state.panels.length) state.panels.push(newPanel());
       saveState(); renderAll();
+    }
+
+    function deleteLog(id) {
+      const hasPanel = state.panels.some(p => p.id === id);
+      if (hasPanel) {
+        alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
+        return;
+      }
+      const log = state.logs.find(l => l.id === id || l.panelId === id);
+      if (!log) return;
+      if (!confirm("この記録を削除しますか？")) return;
+      state.logs = state.logs.filter(l => l.id !== id && l.panelId !== id);
+      saveState();
+      renderAll();
+    }
+
+    function showLockedLogMessage() {
+      alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
     }
 
     function updateLogFromPanel(panel) { ensureLogLinks(); }
@@ -1396,6 +1492,8 @@ Changes
       if(el.dataset.start) startPanel(el.dataset.start);
       if(el.dataset.stop) stopPanel(el.dataset.stop);
       if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
+      if(el.dataset.deleteLog) deleteLog(el.dataset.deleteLog);
+      if(el.dataset.logLocked) showLockedLogMessage();
       if(el.dataset.editItem) editItem(el.dataset.editItem);
       if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
     });
