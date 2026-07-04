@@ -1,16 +1,14 @@
 <!--
 ==================================================
 作業タイマー
-Version : v38-20260704-1800
-Base    : v37.3
-Date    : 2026-07-04 18:00
+Version : v38.2-20260704-1815
+Base    : v38.1
+Date    : 2026-07-04 18:15
 
 Changes
-- 項目選択ありカードを再利用カード化
-- 項目選択ありカードは開始ごとにカード非連動の記録を作成
-- 終了後に開始ボタンと完了ボタンを有効化
-- 手入力のみカードは終了時に完了へ移動し、カード削除で記録も削除
-- 完了ボタンを追加
+- 「作業パネルの追加」「項目管理」を記録日と作業パネルの間へ横並び配置
+- 開始時に空の作業パネルを自動追加する動作を廃止
+- v38.1の未分類カード連動仕様を維持
 ==================================================
 -->
 <!doctype html>
@@ -25,7 +23,7 @@ Changes
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v38-20260704-1800</span>
+      <span class="app-version">v38</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -39,12 +37,15 @@ Changes
       </div>
     </section>
 
+    <section class="card action-panel">
+      <div class="top-actions">
+        <button class="secondary add-work-panel-btn" id="addPanelBtn">＋ 作業パネルの追加</button>
+        <button class="secondary item-manage-btn" id="openItemDialogBtn">📋 項目管理</button>
+      </div>
+    </section>
+
     <section class="card">
       <div class="panel-list" id="panelList"></div>
-      <div class="toolbar">
-        <button class="plus" id="addPanelBtn" title="パネル追加">＋</button>
-        <button class="secondary" id="openItemDialogBtn">プルダウン項目管理</button>
-      </div>
     </section>
 
     <section class="card section-card-blue">

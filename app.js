@@ -1,4 +1,4 @@
-// Timer App app.js v38.1
+// Timer App app.js v38.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -503,8 +503,8 @@
       panel.lastLogId = log.id;
       panel.linkedToLog = linkedToLog;
 
-      const hasEmpty = state.panels.some(p=>p.id!==panel.id && !p.start && !p.itemId && !p.customName);
-      if (!hasEmpty) state.panels.push(newPanel());
+      // v38.2: 開始時に空の作業パネルを自動追加しない。
+      // 新しい作業パネルが必要な場合は「作業パネルの追加」ボタンで追加する。
       saveState(); renderAll();
     }
 

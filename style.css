@@ -1,4 +1,4 @@
-/* Timer App style.css v38 */
+/* Timer App style.css v38.2 */
 
 :root {
       --bg: #f6f7f9;
@@ -1048,5 +1048,37 @@ button.complete-btn:disabled {
   }
   .main-actions.three-actions .complete-btn {
     grid-column: 1 / -1;
+  }
+}
+
+
+/* v38.2: top action buttons */
+.action-panel {
+  padding: 7px;
+}
+.top-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+}
+.add-work-panel-btn,
+.item-manage-btn {
+  height: 34px;
+  font-size: 12px !important;
+  padding: 6px 8px !important;
+  border-radius: 8px !important;
+  font-weight: 800;
+}
+.item-manage-btn {
+  white-space: nowrap;
+}
+@media (max-width: 360px) {
+  .top-actions {
+    grid-template-columns: 1fr;
+  }
+  .add-work-panel-btn,
+  .item-manage-btn {
+    width: 100%;
   }
 }
