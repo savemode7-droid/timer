@@ -713,13 +713,35 @@
   margin-top: 6px;
 }
 
+
+/* v25: time-only panel inputs and manual item name */
+.item-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.item-input-row select,
+.item-input-row input {
+  width: 100%;
+  min-width: 0;
+}
+.item-free-name::placeholder {
+  color: #94a3b8;
+}
+@media (max-width: 360px) {
+  .item-input-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v24-20260704-1018</span>
+      <span class="app-version">v25-20260704-1049</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -810,7 +832,7 @@
 
       return {
         items: [],
-        panels: [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null }],
+        panels: [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "" }],
         logs: [],
         lastActivityAt: null
       };
@@ -843,9 +865,10 @@
             itemId: p.itemId || null,
             runningSince: p.runningSince || null,
             activeLogId: p.activeLogId || null,
-            lastLogId: p.lastLogId || null
+            lastLogId: p.lastLogId || null,
+            customName: p.customName || ""
           }))
-        : [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null }];
+        : [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "" }];
 
       return { items, panels, logs, lastActivityAt: s.lastActivityAt || null };
     }
@@ -896,6 +919,25 @@
       return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+
+
+    function timeOnlyValue(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    function localTimeToIso(value, baseIso) {
+      if (!value) return null;
+      const parts = value.split(":").map(Number);
+      if (parts.length < 2 || parts.some(n => Number.isNaN(n))) return null;
+      const base = baseIso ? new Date(baseIso) : new Date();
+      if (Number.isNaN(base.getTime())) return null;
+      const [h, m, sec = 0] = parts;
+      base.setHours(h, m, sec, 0);
+      return base.toISOString();
+    }
+
     function localInputToIso(value) {
       if (!value) return null;
       const d = new Date(value);
@@ -929,6 +971,25 @@
 
     function itemById(id) {
       return state.items.find(i => i.id === id);
+    }
+
+
+
+    function resolvedPanelItemName(panel) {
+      const item = itemById(panel.itemId);
+      const custom = (panel.customName || "").trim();
+      if (item && custom) return `${item.name} ${custom}`;
+      if (item) return item.name;
+      if (custom) return custom;
+      return "未分類";
+    }
+
+    function applyPanelNameToLog(panel) {
+      const log = getPanelLog(panel);
+      if (!log) return;
+      const item = itemById(panel.itemId);
+      log.itemId = item ? item.id : null;
+      log.itemName = resolvedPanelItemName(panel);
     }
 
     function isItemUsedByOtherPanel(panelId, itemId) {
@@ -1048,17 +1109,20 @@
             <div class="time-edit">
               <div class="time-box">
                 <label>開始時間</label>
-                <input type="datetime-local" data-start-time="${panel.id}" value="${dateTimeLocalValue(panelLog?.start)}" ${!panelLog ? "disabled" : ""} />
+                <input type="time" step="1" data-start-time="${panel.id}" value="${timeOnlyValue(panelLog?.start)}" ${!panelLog ? "disabled" : ""} />
               </div>
               <div class="time-box">
                 <label>終了時間</label>
-                <input type="datetime-local" data-end-time="${panel.id}" value="${dateTimeLocalValue(panelLog?.end)}" ${!panelLog ? "disabled" : ""} />
+                <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panelLog?.end)}" ${!panelLog ? "disabled" : ""} />
               </div>
             </div>
 
-            <select data-select-panel="${panel.id}">
-              ${options}
-            </select>
+            <div class="item-input-row">
+              <select data-select-panel="${panel.id}">
+                ${options}
+              </select>
+              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
+            </div>
 
           </div>
         `;
@@ -1154,7 +1218,7 @@
     }
 
     function addPanel(shouldRender = true) {
-      state.panels.push({ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null });
+      state.panels.push({ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "" });
       saveState();
       if (shouldRender) renderAll();
     }
@@ -1184,29 +1248,39 @@
       const log = getPanelLog(panel);
       const now = new Date().toISOString();
 
-      // 計測中または直近の記録がある場合、後から選んだ項目を記録にも反映する。
-      if (log && item) {
-        log.itemId = item.id;
-        log.itemName = item.name;
+      // 計測中または直近の記録がある場合、後から選んだ項目・手入力を記録にも反映する。
+      if (log) {
+        applyPanelNameToLog(panel);
 
         // 項目を後から選んだ時も、同じ項目の別パネルが計測中なら終了して重複を防ぐ。
-        state.panels.forEach(otherPanel => {
-          if (otherPanel.id === panel.id || !otherPanel.runningSince) return;
-          const otherLog = logById(otherPanel.activeLogId);
-          if (!otherLog) return;
+        if (item) {
+          state.panels.forEach(otherPanel => {
+            if (otherPanel.id === panel.id || !otherPanel.runningSince) return;
+            const otherLog = logById(otherPanel.activeLogId);
+            if (!otherLog) return;
 
-          if (otherLog.itemId === item.id || otherLog.itemName === item.name) {
-            otherLog.end = now;
-            recalcLog(otherLog);
-            otherPanel.runningSince = null;
-            otherPanel.activeLogId = null;
-            otherPanel.lastLogId = otherLog.id;
-          }
-        });
+            if (otherLog.itemId === item.id) {
+              otherLog.end = now;
+              recalcLog(otherLog);
+              otherPanel.runningSince = null;
+              otherPanel.activeLogId = null;
+              otherPanel.lastLogId = otherLog.id;
+            }
+          });
+        }
       }
 
       saveState();
       renderAll();
+    }
+
+    function updatePanelCustomName(panelId, value, shouldRender = false) {
+      const panel = state.panels.find(p => p.id === panelId);
+      if (!panel) return;
+      panel.customName = value || "";
+      applyPanelNameToLog(panel);
+      saveState();
+      if (shouldRender) renderAll();
     }
 
     function startPanel(id) {
@@ -1231,7 +1305,7 @@
       const log = {
         id: crypto.randomUUID(),
         itemId: item ? item.id : null,
-        itemName: item ? item.name : "未分類",
+        itemName: resolvedPanelItemName(panel),
         start: now,
         end: now,
         date: dateKey(new Date(now)),
@@ -1245,10 +1319,10 @@
 
       // 開始したら、次の作業をすぐ始められるように空パネルを1つ自動追加する。
       const hasEmptyPanel = state.panels.some(p =>
-        p.id !== panel.id && !p.runningSince && !p.itemId && !p.activeLogId && !p.lastLogId
+        p.id !== panel.id && !p.runningSince && !p.itemId && !p.customName && !p.activeLogId && !p.lastLogId
       );
       if (!hasEmptyPanel) {
-        state.panels.push({ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null });
+        state.panels.push({ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "" });
       }
 
       saveState();
@@ -1272,7 +1346,8 @@
       const log = getPanelLog(panel);
       if (!log) return;
 
-      const iso = localInputToIso(value);
+      const baseIso = field === "start" ? log.start : (log.end || log.start);
+      const iso = localTimeToIso(value, baseIso);
       if (!iso) return;
 
       if (field === "start") {
@@ -1532,6 +1607,12 @@
       if (el.dataset.selectPanel) changePanelItem(el.dataset.selectPanel, el.value);
       if (el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
       if (el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
+      if (el.dataset.customName) updatePanelCustomName(el.dataset.customName, el.value, true);
+    });
+
+    document.body.addEventListener("input", e => {
+      const el = e.target;
+      if (el.dataset.customName) updatePanelCustomName(el.dataset.customName, el.value, false);
     });
 
     document.body.addEventListener("click", e => {
