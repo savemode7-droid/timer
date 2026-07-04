@@ -533,25 +533,26 @@ function renderItemManageList() {
     }
 
     function completePanel(id) {
-      const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running) return;
+      const panel = state.panels.find(p=>p.id===id);
+      if (!panel || panel.running) return;
 
       if (panel.itemId) {
-        // 定型作業：完了しても完了グループへ移動しない。
-        // 直前の記録は残し、次回利用のために手入力だけクリアする。
+        // 定型作業：記録は終了時点で作成済み。完了では新規記録を作らず、手入力だけクリアして次回利用に戻す。
         panel.customName = "";
         panel.start = null;
         panel.end = null;
+        panel.activeLogId = null;
+        panel.lastLogId = null;
+        panel.running = false;
         panel.completed = false;
         panel.collapsed = false;
-        panel.activeLogId = null;
         panel.linkedToLog = false;
       } else {
-        // 作業：完了カードとして扱う。
+        // 通常作業：完了グループへ移動した状態を維持する。
         panel.completed = true;
         panel.collapsed = true;
         panel.activeLogId = null;
       }
-
       saveState(); renderAll();
     }
 
@@ -617,37 +618,24 @@ function renderItemManageList() {
     });
     document.body.addEventListener("input", e => { const el=e.target; if(el.dataset.customName) changeCustomName(el.dataset.customName, el.value); });
     document.body.addEventListener("click", e => {
-      const el=e.target;
-      if (el.closest("button")) {
-        if(el.dataset.start) startPanel(el.dataset.start);
-        if(el.dataset.stop) stopPanel(el.dataset.stop);
-        if(el.dataset.completePanel) completePanel(el.dataset.completePanel);
-        if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
-        if(el.dataset.deleteLog) deleteLog(el.dataset.deleteLog);
-        if(el.dataset.logLocked) showLockedLogMessage();
-        if(el.dataset.editItem) editItem(el.dataset.editItem);
-        if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
-        return;
-      }
-      const toggleGroup = el.closest("[data-toggle-panel-group]");
+      const button = e.target.closest("button");
+      if (!button) return;
+
+      const toggleGroup = button.closest("[data-toggle-panel-group]");
       if (toggleGroup) {
         togglePanelGroup(toggleGroup.dataset.togglePanelGroup);
         return;
       }
-      if(el.dataset.start) startPanel(el.dataset.start);
-      if(el.dataset.stop) stopPanel(el.dataset.stop);
-        if(el.dataset.completePanel) completePanel(el.dataset.completePanel);
-      if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
-      if(el.dataset.deleteLog) deleteLog(el.dataset.deleteLog);
-      if(el.dataset.logLocked) showLockedLogMessage();
-      if(el.dataset.editItem) editItem(el.dataset.editItem);
-      if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
-    });
 
-    finalizeIfDateChanged();
-    $("dateFilter").value = dateKey();
-    saveState();
-    renderAll();
+      if(button.dataset.start) startPanel(button.dataset.start);
+      if(button.dataset.stop) stopPanel(button.dataset.stop);
+      if(button.dataset.completePanel) completePanel(button.dataset.completePanel);
+      if(button.dataset.deletePanel) deletePanel(button.dataset.deletePanel);
+      if(button.dataset.deleteLog) deleteLog(button.dataset.deleteLog);
+      if(button.dataset.logLocked) showLockedLogMessage();
+      if(button.dataset.editItem) editItem(button.dataset.editItem);
+      if(button.dataset.deleteItem) deleteItem(button.dataset.deleteItem);
+    });
 
     setInterval(() => {
       if (finalizeIfDateChanged()) return;
