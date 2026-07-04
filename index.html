@@ -783,7 +783,8 @@
       return {
         items: [],
         panels: [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null }],
-        logs: []
+        logs: [],
+        lastActivityAt: null
       };
     }
 
@@ -818,10 +819,19 @@
           }))
         : [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null }];
 
-      return { items, panels, logs };
+      return { items, panels, logs, lastActivityAt: s.lastActivityAt || null };
+    }
+
+    function touchActivity(iso = new Date().toISOString()) {
+      state.lastActivityAt = iso;
     }
 
     function saveState() {
+      touchActivity();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function saveStateWithoutTouch() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
@@ -906,6 +916,59 @@
       const endMs = new Date(log.end).getTime();
       log.durationMs = Math.max(0, endMs - startMs);
       log.date = dateKey(new Date(log.start));
+    }
+
+    function stopOtherRunningPanels(currentPanelId, endIso) {
+      // v20: 停止忘れ対策。開始ボタンを押した時点で、他の計測中作業はすべて自動終了する。
+      state.panels.forEach(otherPanel => {
+        if (otherPanel.id === currentPanelId || !otherPanel.runningSince) return;
+        stopRunningPanelObject(otherPanel, endIso);
+      });
+    }
+
+    function stopRunningPanelObject(panel, endIso) {
+      const log = logById(panel.activeLogId);
+      if (log) {
+        log.end = endIso;
+        recalcLog(log);
+        panel.lastLogId = log.id;
+      }
+
+      panel.runningSince = null;
+      panel.activeLogId = null;
+    }
+
+    function stopAllRunningPanels(endIso) {
+      let stopped = false;
+      state.panels.forEach(panel => {
+        if (!panel.runningSince) return;
+        stopRunningPanelObject(panel, endIso);
+        stopped = true;
+      });
+      return stopped;
+    }
+
+    function stopRunningOnPageLeave() {
+      // v21: ページを閉じる・再読み込み・別アプリへ移動した時は、その時刻で計測中作業を自動終了する。
+      const now = new Date().toISOString();
+      touchActivity(now);
+      if (stopAllRunningPanels(now)) {
+        saveStateWithoutTouch();
+      } else {
+        saveStateWithoutTouch();
+      }
+    }
+
+    function recoverRunningFromPreviousSession() {
+      // v21: 万一、前回の終了処理が走らずに計測中状態が残っていた場合は、
+      // 最後にアプリが動いていた時刻で自動終了し、数時間伸びる事故を防ぐ。
+      const runningExists = state.panels.some(panel => panel.runningSince);
+      if (!runningExists) return false;
+
+      const fallbackEnd = state.lastActivityAt || new Date().toISOString();
+      stopAllRunningPanels(fallbackEnd);
+      saveStateWithoutTouch();
+      return true;
     }
 
     function renderPanels() {
@@ -1086,11 +1149,27 @@
 
       const item = itemById(panel.itemId);
       const log = getPanelLog(panel);
+      const now = new Date().toISOString();
 
       // 計測中または直近の記録がある場合、後から選んだ項目を記録にも反映する。
       if (log && item) {
         log.itemId = item.id;
         log.itemName = item.name;
+
+        // 項目を後から選んだ時も、同じ項目の別パネルが計測中なら終了して重複を防ぐ。
+        state.panels.forEach(otherPanel => {
+          if (otherPanel.id === panel.id || !otherPanel.runningSince) return;
+          const otherLog = logById(otherPanel.activeLogId);
+          if (!otherLog) return;
+
+          if (otherLog.itemId === item.id || otherLog.itemName === item.name) {
+            otherLog.end = now;
+            recalcLog(otherLog);
+            otherPanel.runningSince = null;
+            otherPanel.activeLogId = null;
+            otherPanel.lastLogId = otherLog.id;
+          }
+        });
       }
 
       saveState();
@@ -1104,28 +1183,22 @@
       const item = itemById(panel.itemId);
       const now = new Date().toISOString();
 
-      let log = logById(panel.lastLogId);
+      // v20: 新しく開始する時は、項目に関係なく他の計測中作業をすべて自動終了する。
+      // 停止し忘れた作業が、後から数時間分として伸びる事故を防ぐ。
+      stopOtherRunningPanels(panel.id, now);
 
-      if (log && !panel.runningSince) {
-        // 終了後に同じパネルで開始した場合は、同じ記録を続行する。
-        if (item) {
-          log.itemId = item.id;
-          log.itemName = item.name;
-        }
-        log.end = now;
-        recalcLog(log);
-      } else {
-        log = {
-          id: crypto.randomUUID(),
-          itemId: item ? item.id : null,
-          itemName: item ? item.name : "未分類",
-          start: now,
-          end: now,
-          date: dateKey(new Date(now)),
-          durationMs: 0
-        };
-        state.logs.push(log);
-      }
+      // v20: 終了後に同じパネルで再度開始しても、過去の記録を延長しない。
+      // 毎回、新しい開始操作として新規記録を作る。
+      const log = {
+        id: crypto.randomUUID(),
+        itemId: item ? item.id : null,
+        itemName: item ? item.name : "未分類",
+        start: now,
+        end: now,
+        date: dateKey(new Date(now)),
+        durationMs: 0
+      };
+      state.logs.push(log);
 
       panel.runningSince = now;
       panel.activeLogId = log.id;
@@ -1147,21 +1220,7 @@
       const panel = state.panels.find(p => p.id === id);
       if (!panel || !panel.runningSince) return;
 
-      const log = logById(panel.activeLogId);
-      if (!log) {
-        panel.runningSince = null;
-        panel.activeLogId = null;
-        saveState();
-        renderAll();
-        return;
-      }
-
-      log.end = new Date().toISOString();
-      recalcLog(log);
-
-      panel.runningSince = null;
-      panel.activeLogId = null;
-      panel.lastLogId = log.id;
+      stopRunningPanelObject(panel, new Date().toISOString());
 
       saveState();
       renderAll();
@@ -1472,17 +1531,34 @@
       if (el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
     });
 
+    window.addEventListener("pagehide", stopRunningOnPageLeave);
+    window.addEventListener("beforeunload", stopRunningOnPageLeave);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        stopRunningOnPageLeave();
+      }
+    });
+
+    recoverRunningFromPreviousSession();
+
     $("dateFilter").value = dateKey();
     saveState();
     renderAll();
 
+    let lastHeartbeatSave = 0;
     setInterval(() => {
+      const hasRunning = state.panels.some(panel => panel.runningSince);
       state.panels.forEach(panel => {
         if (!panel.runningSince) return;
         const log = getPanelLog(panel);
         const node = document.querySelector(`[data-elapsed="${panel.id}"]`);
         if (node && log) node.textContent = durationText(Date.now() - new Date(log.start).getTime());
       });
+
+      if (hasRunning && Date.now() - lastHeartbeatSave > 10000) {
+        lastHeartbeatSave = Date.now();
+        saveState();
+      }
     }, 1000);
   </script>
 </body>
