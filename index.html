@@ -1,18 +1,14 @@
 <!--
 ==================================================
 作業タイマー
-Version : v30-20260704-1555
-Base    : v29
-Date    : 2026-07-04 15:55
+Version : v32-20260704-1620
+Base    : v31
+Date    : 2026-07-04 16:20
 
 Changes
-- ソース先頭にバージョンコメントを追加
-- 記録日と今日ボタンを記録パネル上部へ配置
-- レイアウト順を 作業パネル → 記録 → 合計 → 出力 に変更
-- 合計を「表示日・今週（月〜日）・今月」の1行表示に変更
-- 完了パネルを「開始・終了・作業」の1行表示に変更
-- 完了後も項目・手入力・開始・終了を編集可能に変更
-- 表示と保存処理を整理し、パネル＝ログ1件の構造を維持
+- 合計パネルを「今日の合計」「今月の合計」の2行表示に変更
+- 今週の合計表示を削除
+- v31の記録日最上部配置、パネル＝ログ1件、完了パネル1行表示を維持
 ==================================================
 -->
 <!doctype html>
@@ -820,6 +816,33 @@ Changes
 .period-summary span {
   display: inline-block;
 }
+
+/* v32: two-line total summary */
+.period-summary.two-line {
+  display: grid;
+  gap: 4px;
+  justify-content: stretch;
+  text-align: left;
+  white-space: normal;
+  overflow-x: visible;
+  font-size: 13px;
+  padding: 6px 4px;
+}
+.period-summary.two-line .summary-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.period-summary.two-line .summary-label {
+  color: #64748b;
+  font-weight: 800;
+}
+.period-summary.two-line .summary-value {
+  color: #1e40af;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
 .work-time-line {
   display: flex;
   align-items: center;
@@ -864,12 +887,20 @@ Changes
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v30-20260704-1555</span>
+      <span class="app-version">v32-20260704-1620</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
 
   <main>
+    <section class="card">
+      <h2 class="section-title">記録日</h2>
+      <div class="date-row">
+        <input id="dateFilter" type="date" />
+        <button class="secondary" id="todayBtn">今日</button>
+      </div>
+    </section>
+
     <section class="card">
       <div class="panel-list" id="panelList"></div>
       <div class="toolbar">
@@ -880,10 +911,6 @@ Changes
 
     <section class="card">
       <h2 class="section-title">記録</h2>
-      <div class="date-row">
-        <input id="dateFilter" type="date" />
-        <button class="secondary" id="todayBtn">今日</button>
-      </div>
       <div id="logs"></div>
     </section>
 
@@ -1170,32 +1197,21 @@ Changes
     }
 
     function renderSummary() {
-      const targetDate = $("dateFilter")?.value || dateKey();
-      const baseDate = new Date(`${targetDate}T00:00:00`);
-      const weekStart = startOfWeekMonday(baseDate);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      const targetMonth = targetDate.slice(0, 7);
+      const today = dateKey();
+      const targetMonth = monthKey();
 
       const logs = currentLogsForCalc();
-      const dateTotal = logs
-        .filter(l => l.date === targetDate)
-        .reduce((sum, l) => sum + l.durationMs, 0);
-      const weekTotal = logs
-        .filter(l => {
-          const d = new Date(`${l.date}T00:00:00`);
-          return d >= weekStart && d <= weekEnd;
-        })
+      const todayTotal = logs
+        .filter(l => l.date === today)
         .reduce((sum, l) => sum + l.durationMs, 0);
       const monthTotal = logs
         .filter(l => (l.date || "").slice(0, 7) === targetMonth)
         .reduce((sum, l) => sum + l.durationMs, 0);
 
       $("summary").innerHTML = `
-        <div class="period-summary">
-          <span>合計 ${durationJa(dateTotal)}</span>
-          <span>今週 ${durationJa(weekTotal)}</span>
-          <span>今月 ${durationJa(monthTotal)}</span>
+        <div class="period-summary two-line">
+          <div class="summary-row"><span class="summary-label">今日の合計</span><span class="summary-value">${durationJa(todayTotal)}</span></div>
+          <div class="summary-row"><span class="summary-label">今月の合計</span><span class="summary-value">${durationJa(monthTotal)}</span></div>
         </div>`;
     }
 
