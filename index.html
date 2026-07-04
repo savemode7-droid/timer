@@ -779,7 +779,7 @@
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v27-20260704-1215</span>
+      <span class="app-version">v28-20260704-1510</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -1134,7 +1134,12 @@
       const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.completed) return;
       panel.customName = value || "";
       updateLogFromPanel(panel);
-      saveState(); renderAll();
+      saveState();
+      // v28: 入力中にパネル全体を再描画すると、1文字ごとにフォーカスが外れるため、
+      // パネルは描き直さず、集計と記録一覧だけ更新する。
+      renderSummary();
+      renderMonthFilter();
+      renderLogs();
     }
 
     function startPanel(id) {
