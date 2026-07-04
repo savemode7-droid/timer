@@ -773,13 +773,24 @@
   .done-summary { grid-template-columns: 1fr; }
 }
 
+
+/* v29: total only summary */
+.total-summary {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 900;
+  color: #1e40af;
+  padding: 8px 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v28-20260704-1510</span>
+      <span class="app-version">v29-20260704-1519</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -1083,10 +1094,13 @@
 
     function renderSummary() {
       const today = dateKey();
-      const sums = {};
-      currentLogsForCalc().filter(l=>l.date===today).forEach(l => { sums[l.itemName] = (sums[l.itemName]||0) + l.durationMs; });
-      const entries = Object.entries(sums).sort((a,b)=>b[1]-a[1]);
-      $("summary").innerHTML = entries.length ? `<table><thead><tr><th>項目</th><th class="right">合計</th></tr></thead><tbody>` + entries.map(([name,ms])=>`<tr><td>${escapeHtml(name)}</td><td class="right">${durationJa(ms)}</td></tr>`).join("") + `</tbody></table>` : `<div class="empty">今日の記録はまだありません。</div>`;
+      const totalMs = currentLogsForCalc()
+        .filter(l => l.date === today)
+        .reduce((sum, l) => sum + l.durationMs, 0);
+
+      $("summary").innerHTML = totalMs > 0
+        ? `<div class="total-summary">${durationJa(totalMs)}</div>`
+        : `<div class="empty">今日の記録はまだありません。</div>`;
     }
 
     function renderMonthFilter() {
