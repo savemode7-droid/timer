@@ -1,6 +1,6 @@
-/* Timer App style.css v37.2 */
+/* Timer App style.css v37.3 */
 
-    :root {
+:root {
       --bg: #f6f7f9;
       --card: #ffffff;
       --text: #17202a;
@@ -999,4 +999,33 @@
   font-size: 10px;
   opacity: .85;
   margin-left: 6px;
+}
+
+
+/* v37.3: group-level collapse headers */
+.panel-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #1f2937;
+  color: #fff;
+  border-radius: 9px;
+  padding: 6px 9px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  min-height: 30px;
+}
+.panel-group-head.completed {
+  background: #475569;
+}
+.panel-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e5e7eb;
+}
+.panel-group-head + .timer-panel {
+  margin-top: 0;
 }

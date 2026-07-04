@@ -1,5 +1,4 @@
-// Timer App app.js v37.2
-
+// Timer App app.js v37.3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -29,7 +28,7 @@
         if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-      return { items:[], panels:[newPanel()], logs:[], currentDate:dateKey() };
+      return { items:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, completedCollapsed:true } };
     }
 
     function normalizeState(s) {
@@ -73,7 +72,7 @@
       }
       if (!panels.length) panels = [newPanel()];
 
-      const normalized = { items, panels, logs, currentDate: s.currentDate || dateKey() };
+      const normalized = { items, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: s.panelGroups || { workCollapsed:false, completedCollapsed:true } };
       ensureLogLinks(normalized);
       return normalized;
     }
@@ -177,16 +176,29 @@
       const list = $("panelList");
       if (!state.panels.length) state.panels.push(newPanel());
 
+      const allPanels = sortedPanelsForDisplay();
+      const workPanels = allPanels.filter(panel => !panel.completed);
+      const completedPanels = allPanels.filter(panel => panel.completed);
+
+      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, completedCollapsed: true };
+      const workCollapsed = !!state.panelGroups.workCollapsed;
+      const completedCollapsed = state.panelGroups.completedCollapsed !== false;
+
       const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
 
-      let workCount = 0;
-      let completedCount = 0;
-      list.innerHTML = sortedPanelsForDisplay().map((panel) => {
+      function renderGroupHeader(kind, label, count, collapsed) {
+        return `
+          <div class="panel-group-head ${kind}" data-toggle-panel-group="${kind}" title="タップで開閉">
+            <span>${collapsed ? "▶" : "▼"} ${label}</span>
+            <span class="panel-group-count">${count}件</span>
+          </div>
+        `;
+      }
+
+      function renderPanelCard(panel, title) {
         const running = !!panel.running;
         const completed = !!panel.completed;
-        const collapsed = completed && panel.collapsed !== false;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
-        const title = completed ? `${collapsed ? "▶" : "▼"} ${escapeHtml(buildItemName(panel))}` : `作業${++workCount}`;
         const actionControls = completed ? `` : `
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
@@ -206,13 +218,12 @@
           `;
 
         return `
-          <div class="timer-panel ${completed ? "completed" : ""} ${collapsed ? "collapsed" : ""}">
-            <div class="panel-head" ${completed ? `data-toggle-completed="${panel.id}" title="タップで開閉"` : ""}>
+          <div class="timer-panel ${completed ? "completed" : ""}">
+            <div class="panel-head">
               <div><div class="panel-title">${title}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
             </div>
 
-            ${collapsed ? "" : `
             <div class="item-input-row">
               <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
               <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
@@ -220,10 +231,23 @@
 
             ${actionControls}
             ${timeLine}
-            `}
           </div>
         `;
-      }).join("");
+      }
+
+      let html = "";
+      html += renderGroupHeader("work", "作業", workPanels.length, workCollapsed);
+      if (!workCollapsed) {
+        let workCount = 0;
+        html += workPanels.map(panel => renderPanelCard(panel, `作業${++workCount}`)).join("");
+      }
+
+      html += renderGroupHeader("completed", "完了", completedPanels.length, completedCollapsed);
+      if (!completedCollapsed) {
+        html += completedPanels.map(panel => renderPanelCard(panel, escapeHtml(buildItemName(panel)))).join("");
+      }
+
+      list.innerHTML = html;
     }
 
     function renderItemManageList() {
@@ -340,10 +364,10 @@
       alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
     }
 
-    function toggleCompletedPanel(id) {
-      const panel = state.panels.find(p => p.id === id);
-      if (!panel || !panel.completed) return;
-      panel.collapsed = !panel.collapsed;
+    function togglePanelGroup(kind) {
+      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, completedCollapsed: true };
+      if (kind === "work") state.panelGroups.workCollapsed = !state.panelGroups.workCollapsed;
+      if (kind === "completed") state.panelGroups.completedCollapsed = !state.panelGroups.completedCollapsed;
       saveState();
       renderAll();
     }
@@ -460,8 +484,11 @@
         if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
         return;
       }
-      const toggleHead = el.closest("[data-toggle-completed]");
-      if (toggleHead) toggleCompletedPanel(toggleHead.dataset.toggleCompleted);
+      const toggleGroup = el.closest("[data-toggle-panel-group]");
+      if (toggleGroup) {
+        togglePanelGroup(toggleGroup.dataset.togglePanelGroup);
+        return;
+      }
       if(el.dataset.start) startPanel(el.dataset.start);
       if(el.dataset.stop) stopPanel(el.dataset.stop);
       if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
