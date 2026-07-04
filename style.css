@@ -1,4 +1,4 @@
-/* Timer App style.css v38.2 */
+/* Timer App style.css v38.3 */
 
 :root {
       --bg: #f6f7f9;
@@ -1081,4 +1081,56 @@ button.complete-btn:disabled {
   .item-manage-btn {
     width: 100%;
   }
+}
+
+
+/* v38.3: work / template / completed groups */
+.panel-group {
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+.panel-group + .panel-group {
+  margin-top: 8px;
+}
+.panel-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: #1f2937;
+  color: #fff;
+  border: 0;
+  border-radius: 0;
+  padding: 7px 9px;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: left;
+}
+.panel-group-head.completed-group-head {
+  background: #475569;
+}
+.panel-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .85;
+}
+.panel-group-body {
+  display: grid;
+  gap: 7px;
+  padding: 7px;
+}
+.panel-group-empty {
+  color: #64748b;
+  font-size: 11px;
+  text-align: center;
+  padding: 9px 3px;
+}
+.template-panel {
+  border-color: #cbd5e1;
+}
+.template-panel .panel-head {
+  background: #1f2937;
 }

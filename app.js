@@ -1,4 +1,4 @@
-// Timer App app.js v38.2
+// Timer App app.js v38.3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -28,7 +28,7 @@
         if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-      return { items:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, completedCollapsed:true } };
+      return { items:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true } };
     }
 
     function normalizeState(s) {
@@ -75,7 +75,7 @@
       }
       if (!panels.length) panels = [newPanel()];
 
-      const normalized = { items, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: s.panelGroups || { workCollapsed:false, completedCollapsed:true } };
+      const normalized = { items, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, ...(s.panelGroups || {}) } };
       ensureLogLinks(normalized);
       return normalized;
     }
@@ -191,41 +191,28 @@
         return tb - ta;
       });
     }
-
     function renderPanels() {
       const list = $("panelList");
       if (!state.panels.length) state.panels.push(newPanel());
-
-      const allPanels = sortedPanelsForDisplay();
-      const workPanels = allPanels.filter(panel => !panel.completed);
-      const completedPanels = allPanels.filter(panel => panel.completed);
-
-      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, completedCollapsed: true };
-      const workCollapsed = !!state.panelGroups.workCollapsed;
-      const completedCollapsed = state.panelGroups.completedCollapsed !== false;
+      if (!state.panelGroups) state.panelGroups = { workCollapsed:false, templateCollapsed:false, completedCollapsed:true };
 
       const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
 
-      function renderGroupHeader(kind, label, count, collapsed) {
-        return `
-          <div class="panel-group-head ${kind}" data-toggle-panel-group="${kind}" title="タップで開閉">
-            <span>${collapsed ? "▶" : "▼"} ${label}</span>
-            <span class="panel-group-count">${count}件</span>
-          </div>
-        `;
-      }
+      const allPanels = sortedPanelsForDisplay();
+      const workPanels = allPanels.filter(p => !p.completed && !p.itemId);
+      const templatePanels = allPanels.filter(p => !p.completed && !!p.itemId);
+      const completedPanels = allPanels.filter(p => !!p.completed);
 
-      function renderPanelCard(panel, title) {
+      function panelHtml(panel, title, extraClass = "") {
         const running = !!panel.running;
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
-        const canComplete = !!panel.itemId && !!panel.start && !running;
-        const completeButton = panel.itemId ? `<button class="complete-btn" data-complete-panel="${panel.id}" ${canComplete ? "" : "disabled"}>完了</button>` : "";
+        const canComplete = !!panel.itemId && !!panel.end && !running && !completed;
         const actionControls = completed ? `` : `
-            <div class="main-actions ${panel.itemId ? "three-actions" : ""}">
+            <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
               <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
-              ${completeButton}
+              <button class="green complete-btn" data-complete="${panel.id}" ${!canComplete ? "disabled" : ""}>完了</button>
             </div>
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
           `;
@@ -241,9 +228,9 @@
           `;
 
         return `
-          <div class="timer-panel ${completed ? "completed" : ""}">
+          <div class="timer-panel ${completed ? "completed" : ""} ${extraClass}">
             <div class="panel-head">
-              <div><div class="panel-title">${title}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
+              <div><div class="panel-title">${escapeHtml(title)}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
             </div>
 
@@ -258,22 +245,28 @@
         `;
       }
 
-      let html = "";
-      html += renderGroupHeader("work", "作業", workPanels.length, workCollapsed);
-      if (!workCollapsed) {
-        let workCount = 0;
-        html += workPanels.map(panel => renderPanelCard(panel, `作業${++workCount}`)).join("");
+      function groupHtml(kind, label, panels, collapsed, titleBuilder, extraClass = "") {
+        const mark = collapsed ? "＋" : "−";
+        return `
+          <div class="panel-group">
+            <button class="panel-group-head ${kind === "completed" ? "completed-group-head" : ""}" data-toggle-group="${kind}">
+              <span>${mark} ${label}</span>
+              <span class="panel-group-count">${panels.length}件</span>
+            </button>
+            ${collapsed ? "" : `<div class="panel-group-body">${
+              panels.length ? panels.map((panel, i) => panelHtml(panel, titleBuilder(panel, i), extraClass)).join("") : `<div class="panel-group-empty">パネルはありません。</div>`
+            }</div>`}
+          </div>
+        `;
       }
 
-      html += renderGroupHeader("completed", "完了", completedPanels.length, completedCollapsed);
-      if (!completedCollapsed) {
-        html += completedPanels.map(panel => renderPanelCard(panel, escapeHtml(buildItemName(panel)))).join("");
-      }
-
-      list.innerHTML = html;
+      list.innerHTML =
+        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p, i) => `作業${i + 1}`) +
+        groupHtml("template", "定型作業", templatePanels, state.panelGroups.templateCollapsed, (p) => buildItemName(p), "template-panel") +
+        groupHtml("completed", "完了", completedPanels, state.panelGroups.completedCollapsed, (p) => buildItemName(p));
     }
 
-    function renderItemManageList() {
+function renderItemManageList() {
       const area = $("itemManageList");
       const items = sortedItems();
       area.innerHTML = items.length ? items.map(item => `
@@ -398,8 +391,9 @@
     }
 
     function togglePanelGroup(kind) {
-      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, completedCollapsed: true };
+      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, templateCollapsed: false, completedCollapsed: true };
       if (kind === "work") state.panelGroups.workCollapsed = !state.panelGroups.workCollapsed;
+      if (kind === "template") state.panelGroups.templateCollapsed = !state.panelGroups.templateCollapsed;
       if (kind === "completed") state.panelGroups.completedCollapsed = !state.panelGroups.completedCollapsed;
       saveState();
       renderAll();
