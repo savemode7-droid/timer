@@ -1,16 +1,15 @@
 <!--
 ==================================================
 作業タイマー
-Version : v35-20260704-1645
-Base    : v33
-Date    : 2026-07-04 16:45
+Version : v36-20260704-1725
+Base    : v35
+Date    : 2026-07-04 17:25
 
 Changes
-- 記録一覧に操作列を追加
-- 対応する作業パネルが存在する記録はロック表示に変更
-- パネルが存在しない記録は削除ボタンで削除可能に変更
-- 合計パネルを「今日・今週・今月」の1行セル表示に変更
-- ラベル部分を灰色、時間部分を白色に変更
+- 作業パネルと完了パネルの番号を別々に採番するよう変更
+- 項目入力欄と開始・終了行の間隔を調整
+- 記録一覧の項目表示を「選択項目優先、未選択時は手入力のみ」に変更
+- v35の記録削除ボタン、ロック表示、合計セル表示を維持
 ==================================================
 -->
 <!doctype html>
@@ -984,13 +983,22 @@ Changes
   }
 }
 
+
+/* v36: panel spacing and separate numbering */
+.item-input-row {
+  margin-bottom: 9px;
+}
+.work-time-line {
+  margin-top: 8px;
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v35-20260704-1645</span>
+      <span class="app-version">v36-20260704-1725</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -1171,7 +1179,8 @@ Changes
       const item = items.find(i=>i.id===panel.itemId);
       const base = item ? item.name : "";
       const free = (panel.customName || "").trim();
-      if (base && free) return `${base} ${free}`;
+      // v36: 記録一覧・出力の項目名は、ドロップダウン選択を優先する。
+      // ドロップダウン未選択で手入力がある場合だけ、手入力を項目名として使う。
       if (base) return base;
       if (free) return free;
       return "未分類";
@@ -1233,11 +1242,13 @@ Changes
 
       const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
 
-      list.innerHTML = sortedPanelsForDisplay().map((panel, index) => {
+      let workCount = 0;
+      let completedCount = 0;
+      list.innerHTML = sortedPanelsForDisplay().map((panel) => {
         const running = !!panel.running;
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
-        const title = completed ? `完了${index + 1}` : `作業${index + 1}`;
+        const title = completed ? `完了${++completedCount}` : `作業${++workCount}`;
         const actionControls = completed ? `` : `
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
