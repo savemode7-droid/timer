@@ -1,3 +1,4 @@
+// Timer App app.js v37.1
 
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
@@ -112,8 +113,9 @@
       const item = items.find(i=>i.id===panel.itemId);
       const base = item ? item.name : "";
       const free = (panel.customName || "").trim();
-      // v36: 記録一覧・出力の項目名は、ドロップダウン選択を優先する。
-      // ドロップダウン未選択で手入力がある場合だけ、手入力を項目名として使う。
+      // v37.1: ドロップダウン選択と手入力が両方ある場合は、スペースなしで結合する。
+      // 例: ゲーム + 33 => ゲーム33
+      if (base && free) return `${base}${free}`;
       if (base) return base;
       if (free) return free;
       return "未分類";
