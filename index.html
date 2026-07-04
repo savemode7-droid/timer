@@ -735,13 +735,51 @@
   }
 }
 
+
+/* v27: panel-as-one-log layout */
+.timer-panel.completed {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+.timer-panel.completed .panel-head {
+  background: #64748b;
+}
+.done-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+}
+.done-box {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 6px 5px;
+  text-align: center;
+}
+.done-label {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.done-value {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+}
+@media (max-width: 360px) {
+  .done-summary { grid-template-columns: 1fr; }
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v26-20260704-1139</span>
+      <span class="app-version">v27-20260704-1215</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -805,911 +843,405 @@
   </dialog>
 
   <script>
-    const STORAGE_KEY = "work_timer_panel_app_v4";
-    const OLD_KEYS = ["work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
+
+    const STORAGE_KEY = "work_timer_panel_app_v5";
+    const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
     const $ = (id) => document.getElementById(id);
 
     let state = loadState();
 
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function dateKey(d = new Date()) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+    function monthKey(d = new Date()) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
+    function monthLabel(key) { const [y, m] = key.split("-"); return `${Number(y)}年${Number(m)}月`; }
+    function timeText(iso) { if (!iso) return ""; const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+    function timeOnlyValue(iso) { return timeText(iso); }
+    function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"}[c])); }
+    function durationText(ms) { const t=Math.max(0,Math.floor(ms/1000)); const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60; return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`; }
+    function durationJa(ms) { const totalMin=Math.round(ms/60000); const h=Math.floor(totalMin/60), m=totalMin%60; if(h&&m) return `${h}時間${m}分`; if(h) return `${h}時間`; return `${m}分`; }
+    function nowIso() { return new Date().toISOString(); }
+
+    function newPanel() {
+      const id = crypto.randomUUID();
+      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, date:dateKey() };
+    }
+
     function loadState() {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
+      for (const key of [STORAGE_KEY, ...OLD_KEYS]) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-
-      for (const key of OLD_KEYS) {
-        const old = localStorage.getItem(key);
-        if (!old) continue;
-        try {
-          const oldState = JSON.parse(old);
-          return normalizeState({
-            items: oldState.items || [],
-            panels: oldState.panels || [{ id: crypto.randomUUID(), itemId: null, runningSince: null }],
-            logs: oldState.logs || []
-          });
-        } catch {}
-      }
-
-      return {
-        items: [],
-        panels: [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "", panelRunId: null }],
-        logs: [],
-        lastActivityAt: null,
-        appDate: dateKey()
-      };
+      return { items:[], panels:[newPanel()], logs:[], currentDate:dateKey() };
     }
 
     function normalizeState(s) {
-      const items = Array.isArray(s.items) ? s.items.filter(i => i && i.name).map(i => ({
-        id: i.id || crypto.randomUUID(),
-        name: i.name,
-        kana: i.kana || i.name
-      })) : [];
+      const items = Array.isArray(s.items) ? s.items.filter(i=>i&&i.name).map(i=>({ id:i.id||crypto.randomUUID(), name:i.name, kana:i.kana||i.name })) : [];
 
       const logs = Array.isArray(s.logs) ? s.logs.map(l => {
-        const start = l.start || new Date().toISOString();
+        const start = l.start || nowIso();
         const end = l.end || start;
         return {
-          id: l.id || crypto.randomUUID(),
+          id: l.id || l.panelId || crypto.randomUUID(),
+          panelId: l.panelId || l.id || crypto.randomUUID(),
           itemId: l.itemId || null,
-          itemName: l.itemName || "",
-          start,
-          end,
+          customName: l.customName || "",
+          itemName: l.itemName || "未分類",
+          start, end,
           date: l.date || dateKey(new Date(start)),
           durationMs: Math.max(0, new Date(end).getTime() - new Date(start).getTime()),
-          panelRunId: l.panelRunId || null
+          completed: !!l.completed
         };
       }) : [];
 
-      let panels = Array.isArray(s.panels) && s.panels.length
-        ? s.panels.map(p => ({
-            id: p.id || crypto.randomUUID(),
-            itemId: p.itemId || null,
-            runningSince: p.runningSince || null,
-            activeLogId: p.activeLogId || null,
-            lastLogId: p.lastLogId || null,
-            customName: p.customName || "",
-            panelRunId: p.panelRunId || null
-          }))
-        : [{ id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "", panelRunId: null }];
+      let panels = [];
+      if (Array.isArray(s.panels) && s.panels.length) {
+        panels = s.panels.map(p => {
+          const id = p.id || p.activeLogId || p.lastLogId || crypto.randomUUID();
+          const linkedLog = logs.find(l => l.id === id || l.panelId === id || l.id === p.activeLogId || l.id === p.lastLogId);
+          const start = p.start || linkedLog?.start || p.runningSince || null;
+          const end = p.end || linkedLog?.end || start;
+          return {
+            id,
+            itemId: p.itemId || linkedLog?.itemId || null,
+            customName: p.customName || linkedLog?.customName || "",
+            start,
+            end,
+            running: !!(p.running || p.runningSince),
+            completed: !!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed),
+            date: p.date || (start ? dateKey(new Date(start)) : dateKey())
+          };
+        });
+      }
+      if (!panels.length) panels = [newPanel()];
 
-      return { items, panels, logs, lastActivityAt: s.lastActivityAt || null, appDate: s.appDate || dateKey() };
+      const normalized = { items, panels, logs, currentDate: s.currentDate || dateKey() };
+      ensureLogLinks(normalized);
+      return normalized;
     }
 
-    function touchActivity(iso = new Date().toISOString()) {
-      state.lastActivityAt = iso;
+    function ensureLogLinks(target = state) {
+      target.panels.forEach(panel => {
+        if (!panel.start) return;
+        let log = target.logs.find(l => l.id === panel.id || l.panelId === panel.id);
+        const itemName = buildItemName(panel, target.items);
+        const end = panel.running ? nowIso() : (panel.end || panel.start);
+        if (!log) {
+          log = { id: panel.id, panelId: panel.id, itemId: panel.itemId, customName: panel.customName || "", itemName, start: panel.start, end, date: panel.date || dateKey(new Date(panel.start)), durationMs:0, completed:panel.completed };
+          target.logs.push(log);
+        }
+        log.id = panel.id;
+        log.panelId = panel.id;
+        log.itemId = panel.itemId || null;
+        log.customName = panel.customName || "";
+        log.itemName = itemName;
+        log.start = panel.start;
+        log.end = end;
+        log.date = panel.date || dateKey(new Date(panel.start));
+        log.completed = !!panel.completed;
+        recalcLog(log);
+      });
     }
 
     function saveState() {
-      touchActivity();
+      ensureLogLinks();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    function saveStateWithoutTouch() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    function sortedItems() { return [...state.items].sort((a,b)=>(a.kana||a.name).localeCompare((b.kana||b.name),"ja")); }
+    function itemById(id) { return state.items.find(i=>i.id===id); }
+    function logById(id) { return state.logs.find(l=>l.id===id || l.panelId===id); }
+
+    function buildItemName(panel, items = state.items) {
+      const item = items.find(i=>i.id===panel.itemId);
+      const base = item ? item.name : "";
+      const free = (panel.customName || "").trim();
+      if (base && free) return `${base} ${free}`;
+      if (base) return base;
+      if (free) return free;
+      return "未分類";
     }
 
-    function createEmptyPanel() {
-      return { id: crypto.randomUUID(), itemId: null, runningSince: null, activeLogId: null, lastLogId: null, customName: "", panelRunId: null };
-    }
-
-    function resetPanelsForNewDay() {
-      state.panels = [createEmptyPanel()];
-      state.appDate = dateKey();
-    }
-
-    function checkDateRollover(shouldRender = false) {
-      const today = dateKey();
-      if (state.appDate === today) return false;
-      stopAllRunningPanels(new Date().toISOString());
-      resetPanelsForNewDay();
-      saveState();
-      if ($("dateFilter")) $("dateFilter").value = today;
-      if (shouldRender) renderAll();
-      return true;
-    }
-
-    function sortedItems() {
-      return [...state.items].sort((a, b) =>
-        (a.kana || a.name).localeCompare((b.kana || b.name), "ja")
-      );
-    }
-
-    function pad(n) { return String(n).padStart(2, "0"); }
-
-    function dateKey(d = new Date()) {
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    }
-
-    function monthKey(d = new Date()) {
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
-    }
-
-    function monthLabel(key) {
-      const [y, m] = key.split("-");
-      return `${Number(y)}年${Number(m)}月`;
-    }
-
-    function timeText(iso) {
-      if (!iso) return "";
-      const d = new Date(iso);
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
-    function dateTimeLocalValue(iso) {
-      if (!iso) return "";
-      const d = new Date(iso);
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
-
-
-    function timeOnlyValue(iso) {
-      if (!iso) return "";
-      const d = new Date(iso);
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    function recalcLog(log) {
+      const startMs = new Date(log.start).getTime();
+      const endMs = new Date(log.end || log.start).getTime();
+      log.durationMs = Math.max(0, endMs - startMs);
+      log.date = dateKey(new Date(log.start));
     }
 
     function localTimeToIso(value, baseIso) {
       if (!value) return null;
       const parts = value.split(":").map(Number);
-      if (parts.length < 2 || parts.some(n => Number.isNaN(n))) return null;
+      if (parts.length < 2 || parts.some(n=>Number.isNaN(n))) return null;
       const base = baseIso ? new Date(baseIso) : new Date();
       if (Number.isNaN(base.getTime())) return null;
-      const [h, m, sec = 0] = parts;
-      base.setHours(h, m, sec, 0);
+      const [h,m,s=0] = parts;
+      base.setHours(h,m,s,0);
       return base.toISOString();
     }
 
-    function localInputToIso(value) {
-      if (!value) return null;
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return null;
-      return d.toISOString();
-    }
-
-    function durationText(ms) {
-      const totalSec = Math.max(0, Math.floor(ms / 1000));
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
-      return `${m}:${pad(s)}`;
-    }
-
-    function durationJa(ms) {
-      const totalMin = Math.round(ms / 60000);
-      const h = Math.floor(totalMin / 60);
-      const m = totalMin % 60;
-      if (h && m) return `${h}時間${m}分`;
-      if (h) return `${h}時間`;
-      return `${m}分`;
-    }
-
-    function escapeHtml(s) {
-      return String(s ?? "").replace(/[&<>"']/g, c => ({
-        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-      }[c]));
-    }
-
-    function itemById(id) {
-      return state.items.find(i => i.id === id);
-    }
-
-
-
-    function resolvedPanelItemName(panel) {
-      const item = itemById(panel.itemId);
-      const custom = (panel.customName || "").trim();
-      if (item && custom) return `${item.name} ${custom}`;
-      if (item) return item.name;
-      if (custom) return custom;
-      return "未分類";
-    }
-
-    function applyPanelNameToLog(panel) {
-      const log = getPanelLog(panel);
-      if (!log) return;
-      const item = itemById(panel.itemId);
-      log.itemId = item ? item.id : null;
-      log.itemName = resolvedPanelItemName(panel);
-    }
-
-    function isItemUsedByOtherPanel(panelId, itemId) {
-      if (!itemId) return false;
-      return state.panels.some(p => p.id !== panelId && p.itemId === itemId);
-    }
-
-    function logById(id) {
-      return state.logs.find(l => l.id === id);
-    }
-
-    function getPanelLog(panel) {
-      return logById(panel.activeLogId) || logById(panel.lastLogId);
-    }
-
-    function recalcLog(log) {
-      const startMs = new Date(log.start).getTime();
-      const endMs = new Date(log.end).getTime();
-      log.durationMs = Math.max(0, endMs - startMs);
-      log.date = dateKey(new Date(log.start));
-    }
-
-    function stopOtherRunningPanels(currentPanelId, endIso) {
-      // v23: 停止忘れ対策。開始ボタンを押した時点で、他の計測中作業はすべて自動終了する。
-      state.panels.forEach(otherPanel => {
-        if (otherPanel.id === currentPanelId || !otherPanel.runningSince) return;
-        stopRunningPanelObject(otherPanel, endIso);
-      });
-    }
-
-    function stopRunningPanelObject(panel, endIso) {
-      const log = logById(panel.activeLogId);
-      if (log) {
-        log.end = endIso;
-        recalcLog(log);
-        panel.lastLogId = log.id;
-      }
-
-      panel.runningSince = null;
-      panel.activeLogId = null;
-    }
-
-    function stopAllRunningPanels(endIso) {
-      let stopped = false;
+    function finalizeIfDateChanged() {
+      const today = dateKey();
+      if (state.currentDate === today) return false;
+      const oldDate = state.currentDate || today;
+      const [y,m,d] = oldDate.split("-").map(Number);
+      const endOfOldDay = new Date(y, m-1, d, 23, 59, 59, 0).toISOString();
       state.panels.forEach(panel => {
-        if (!panel.runningSince) return;
-        stopRunningPanelObject(panel, endIso);
-        stopped = true;
+        if (panel.start) {
+          if (panel.running) panel.end = endOfOldDay;
+          panel.running = false;
+          panel.completed = true;
+          panel.date = panel.date || oldDate;
+        }
       });
-      return stopped;
-    }
-
-    function stopRunningOnPageLeave() {
-      // v21: ページを閉じる・再読み込み・別アプリへ移動した時は、その時刻で計測中作業を自動終了する。
-      const now = new Date().toISOString();
-      touchActivity(now);
-      if (stopAllRunningPanels(now)) {
-        saveStateWithoutTouch();
-      } else {
-        saveStateWithoutTouch();
-      }
-    }
-
-    function recoverRunningFromPreviousSession() {
-      // v21: 万一、前回の終了処理が走らずに計測中状態が残っていた場合は、
-      // 最後にアプリが動いていた時刻で自動終了し、数時間伸びる事故を防ぐ。
-      const runningExists = state.panels.some(panel => panel.runningSince);
-      if (!runningExists) return false;
-
-      const fallbackEnd = state.lastActivityAt || new Date().toISOString();
-      stopAllRunningPanels(fallbackEnd);
-      saveStateWithoutTouch();
+      ensureLogLinks();
+      state.panels = [newPanel()];
+      state.currentDate = today;
+      saveState();
       return true;
+    }
+
+    function sortedPanelsForDisplay() {
+      return [...state.panels].sort((a,b) => {
+        const groupA = a.completed ? 1 : 0;
+        const groupB = b.completed ? 1 : 0;
+        if (groupA !== groupB) return groupA - groupB;
+        const ta = a.start ? new Date(a.start).getTime() : 0;
+        const tb = b.start ? new Date(b.start).getTime() : 0;
+        return tb - ta;
+      });
     }
 
     function renderPanels() {
       const list = $("panelList");
-      if (!state.panels.length) addPanel(false);
+      if (!state.panels.length) state.panels.push(newPanel());
 
-      const displayPanels = [...state.panels].sort((a, b) => {
-        const aLog = getPanelLog(a);
-        const bLog = getPanelLog(b);
-        const aTime = aLog ? new Date(aLog.start).getTime() : 0;
-        const bTime = bLog ? new Date(bLog.start).getTime() : 0;
-        if (aTime !== bTime) return bTime - aTime;
-        if (!!a.runningSince !== !!b.runningSince) return a.runningSince ? -1 : 1;
-        return 0;
-      });
+      const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
 
-      list.innerHTML = displayPanels.map((panel, index) => {
-        const usedItemIds = new Set(
-          state.panels
-            .filter(p => p.id !== panel.id && p.itemId)
-            .map(p => p.itemId)
-        );
-        const options = `<option value="">項目を選択</option>` + sortedItems()
-          .filter(item => item.id === panel.itemId || !usedItemIds.has(item.id))
-          .map(item => `<option value="${item.id}">${escapeHtml(item.name)}</option>`)
-          .join("");
-        const item = itemById(panel.itemId);
-        const running = !!panel.runningSince;
-        const panelLog = getPanelLog(panel);
-        const elapsed = running && panelLog
-          ? Date.now() - new Date(panelLog.start).getTime()
-          : panelLog
-            ? panelLog.durationMs
-            : 0;
-
-        return `
-          <div class="timer-panel">
-            <div class="panel-head">
-              <div>
-                <div class="panel-title">作業${index + 1}</div>
-                <div class="small">${running ? "計測中: " + timeText(panelLog?.start || panel.runningSince) + "開始" : "停止中"}</div>
-              </div>
-              <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
+      list.innerHTML = sortedPanelsForDisplay().map((panel, index) => {
+        const running = !!panel.running;
+        const completed = !!panel.completed;
+        const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
+        const title = completed ? `完了${index + 1}` : `作業${index + 1}`;
+        const controls = completed ? `
+            <div class="done-summary">
+              <div class="done-box"><span class="done-label">開始</span><span class="done-value">${timeText(panel.start)}</span></div>
+              <div class="done-box"><span class="done-label">終了</span><span class="done-value">${timeText(panel.end)}</span></div>
+              <div class="done-box"><span class="done-label">作業時間</span><span class="done-value">${durationJa(elapsed)}</span></div>
             </div>
-
+          ` : `
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
               <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
             </div>
-
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
+          `;
 
+        return `
+          <div class="timer-panel ${completed ? "completed" : ""}">
+            <div class="panel-head">
+              <div><div class="panel-title">${title}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
+              <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
+            </div>
+
+            <div class="item-input-row">
+              <select data-select-panel="${panel.id}" ${completed ? "disabled" : ""}>${itemOptions(panel.itemId)}</select>
+              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" ${completed ? "disabled" : ""} />
+            </div>
+
+            ${controls}
 
             <div class="time-edit">
               <div class="time-box">
                 <label>開始時間</label>
-                <input type="time" step="1" data-start-time="${panel.id}" value="${timeOnlyValue(panelLog?.start)}" ${!panelLog ? "disabled" : ""} />
+                <input type="time" step="1" data-start-time="${panel.id}" value="${timeOnlyValue(panel.start)}" ${!panel.start ? "disabled" : ""} />
               </div>
               <div class="time-box">
                 <label>終了時間</label>
-                <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panelLog?.end)}" ${!panelLog ? "disabled" : ""} />
+                <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panel.end)}" ${!panel.start ? "disabled" : ""} />
               </div>
             </div>
-
-            <div class="item-input-row">
-              <select data-select-panel="${panel.id}">
-                ${options}
-              </select>
-              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
-            </div>
-
           </div>
         `;
       }).join("");
-
-      state.panels.forEach(panel => {
-        const select = document.querySelector(`[data-select-panel="${panel.id}"]`);
-        if (select) select.value = panel.itemId || "";
-      });
     }
 
     function renderItemManageList() {
       const area = $("itemManageList");
       const items = sortedItems();
-
-      if (!items.length) {
-        area.innerHTML = `<div class="empty">項目はまだありません。</div>`;
-        return;
-      }
-
-      area.innerHTML = items.map(item => `
+      area.innerHTML = items.length ? items.map(item => `
         <div class="item-card">
-          <div class="item-line">
-            <span class="item-name">${escapeHtml(item.name)}</span>
-            <span class="item-kana">${escapeHtml(item.kana)}</span>
-          </div>
-          <div class="item-actions">
-            <button class="ghost mini-btn" data-edit-item="${item.id}">編集</button>
-            <button class="danger mini-btn" data-delete-item="${item.id}">削除</button>
-          </div>
-        </div>
-      `).join("");
+          <div class="item-line"><span class="item-name">${escapeHtml(item.name)}</span><span class="item-kana">${escapeHtml(item.kana)}</span></div>
+          <div class="item-actions"><button class="ghost mini-btn" data-edit-item="${item.id}">編集</button><button class="danger mini-btn" data-delete-item="${item.id}">削除</button></div>
+        </div>`).join("") : `<div class="empty">項目はまだありません。</div>`;
+    }
+
+    function currentLogsForCalc() {
+      ensureLogLinks();
+      return state.logs.map(l => ({...l, end: (state.panels.find(p=>p.id===l.id)?.running ? nowIso() : l.end)})).map(l => { recalcLog(l); return l; });
     }
 
     function renderSummary() {
       const today = dateKey();
       const sums = {};
-      state.logs.filter(l => l.date === today).forEach(l => {
-        sums[l.itemName] = (sums[l.itemName] || 0) + l.durationMs;
-      });
-
-      const entries = Object.entries(sums).sort((a,b) => b[1] - a[1]);
-      $("summary").innerHTML = entries.length
-        ? `<table><thead><tr><th>項目</th><th class="right">合計</th></tr></thead><tbody>` +
-          entries.map(([name, ms]) => `<tr><td>${escapeHtml(name)}</td><td class="right">${durationJa(ms)}</td></tr>`).join("") +
-          `</tbody></table>`
-        : `<div class="empty">今日の記録はまだありません。</div>`;
+      currentLogsForCalc().filter(l=>l.date===today).forEach(l => { sums[l.itemName] = (sums[l.itemName]||0) + l.durationMs; });
+      const entries = Object.entries(sums).sort((a,b)=>b[1]-a[1]);
+      $("summary").innerHTML = entries.length ? `<table><thead><tr><th>項目</th><th class="right">合計</th></tr></thead><tbody>` + entries.map(([name,ms])=>`<tr><td>${escapeHtml(name)}</td><td class="right">${durationJa(ms)}</td></tr>`).join("") + `</tbody></table>` : `<div class="empty">今日の記録はまだありません。</div>`;
     }
 
     function renderMonthFilter() {
       const select = $("monthFilter");
-      if (!select) return;
-
-      const months = [...new Set(state.logs.map(l => (l.date || dateKey(new Date(l.start))).slice(0, 7)))]
-        .filter(Boolean)
-        .sort();
-
+      const months = [...new Set(state.logs.map(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)))].filter(Boolean).sort();
       const current = select.value || monthKey();
-
       if (!months.includes(monthKey())) months.push(monthKey());
       months.sort();
-
-      select.innerHTML = months.map(m =>
-        `<option value="${m}">${monthLabel(m)}</option>`
-      ).join("");
-
+      select.innerHTML = months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join("");
       select.value = months.includes(current) ? current : monthKey();
     }
 
     function renderLogs() {
       const targetDate = $("dateFilter").value || dateKey();
-      const logs = state.logs.filter(l => l.date === targetDate).sort((a,b) => new Date(a.start) - new Date(b.start));
-
-      $("logs").innerHTML = logs.length
-        ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th></tr></thead><tbody>` +
-          logs.map(l => `
-            <tr>
-              <td>${escapeHtml(l.itemName)}</td>
-              <td>${timeText(l.start)}</td>
-              <td>${timeText(l.end)}</td>
-              <td class="right">${durationJa(l.durationMs)}</td>
-            </tr>`).join("") +
-          `</tbody></table>`
-        : `<div class="empty">この日の記録はありません。</div>`;
+      const logs = currentLogsForCalc().filter(l=>l.date===targetDate).sort((a,b)=>new Date(a.start)-new Date(b.start));
+      $("logs").innerHTML = logs.length ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th></tr></thead><tbody>` + logs.map(l=>`<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td></tr>`).join("") + `</tbody></table>` : `<div class="empty">この日の記録はありません。</div>`;
     }
 
-    function renderAll() {
-      renderPanels();
-      renderItemManageList();
-      renderSummary();
-      renderMonthFilter();
-      renderLogs();
-    }
+    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
 
-    function addPanel(shouldRender = true) {
-      state.panels.push(createEmptyPanel());
-      saveState();
-      if (shouldRender) renderAll();
-    }
+    function addPanel(shouldRender=true) { state.panels.push(newPanel()); saveState(); if (shouldRender) renderAll(); }
 
     function deletePanel(id) {
-      const panel = state.panels.find(p => p.id === id);
+      const panel = state.panels.find(p=>p.id===id);
       if (!panel) return;
-
-      const linkedLogIds = new Set(
-        panel.panelRunId
-          ? state.logs.filter(l => l.panelRunId === panel.panelRunId).map(l => l.id)
-          : []
-      );
-
-      if (panel.runningSince || linkedLogIds.size > 0) {
-        const msg = linkedLogIds.size > 0
-          ? `この作業パネルと紐づく記録 ${linkedLogIds.size}件も削除します。\n過去の別IDの記録は削除されません。\n本当に削除しますか？`
-          : "計測中です。この作業パネルを削除しますか？";
-        if (!confirm(msg)) return;
-      }
-
-      if (linkedLogIds.size > 0) {
-        state.logs = state.logs.filter(l => !linkedLogIds.has(l.id));
-      }
-
-      state.panels = state.panels.filter(p => p.id !== id);
-      if (!state.panels.length) state.panels.push(createEmptyPanel());
-      saveState();
-      renderAll();
+      const hasLog = !!logById(id);
+      const msg = hasLog ? "この作業パネルと、このパネルに紐づく記録1件を削除します。よろしいですか？" : "この作業パネルを削除しますか？";
+      if (!confirm(msg)) return;
+      state.panels = state.panels.filter(p=>p.id!==id);
+      state.logs = state.logs.filter(l=>l.id!==id && l.panelId!==id);
+      if (!state.panels.length) state.panels.push(newPanel());
+      saveState(); renderAll();
     }
+
+    function updateLogFromPanel(panel) { ensureLogLinks(); }
 
     function changePanelItem(panelId, itemId) {
-      const panel = state.panels.find(p => p.id === panelId);
-      if (!panel) return;
-
-      if (itemId && isItemUsedByOtherPanel(panel.id, itemId)) {
-        alert("この項目は別の作業パネルで使用中です。");
-        renderAll();
-        return;
-      }
-
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.completed) return;
       panel.itemId = itemId || null;
-
-      const item = itemById(panel.itemId);
-      const log = getPanelLog(panel);
-      const now = new Date().toISOString();
-
-      // 計測中または直近の記録がある場合、後から選んだ項目・手入力を記録にも反映する。
-      if (log) {
-        applyPanelNameToLog(panel);
-
-        // 項目を後から選んだ時も、同じ項目の別パネルが計測中なら終了して重複を防ぐ。
-        if (item) {
-          state.panels.forEach(otherPanel => {
-            if (otherPanel.id === panel.id || !otherPanel.runningSince) return;
-            const otherLog = logById(otherPanel.activeLogId);
-            if (!otherLog) return;
-
-            if (otherLog.itemId === item.id) {
-              otherLog.end = now;
-              recalcLog(otherLog);
-              otherPanel.runningSince = null;
-              otherPanel.activeLogId = null;
-              otherPanel.lastLogId = otherLog.id;
-            }
-          });
-        }
-      }
-
-      saveState();
-      renderAll();
+      updateLogFromPanel(panel);
+      saveState(); renderAll();
     }
 
-    function updatePanelCustomName(panelId, value, shouldRender = false) {
-      const panel = state.panels.find(p => p.id === panelId);
-      if (!panel) return;
+    function changeCustomName(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.completed) return;
       panel.customName = value || "";
-      applyPanelNameToLog(panel);
-      saveState();
-      if (shouldRender) renderAll();
+      updateLogFromPanel(panel);
+      saveState(); renderAll();
     }
 
     function startPanel(id) {
-      const panel = state.panels.find(p => p.id === id);
-      if (!panel) return;
-
-      if (panel.itemId && isItemUsedByOtherPanel(panel.id, panel.itemId)) {
-        alert("この項目は別の作業パネルで使用中です。");
-        renderAll();
-        return;
-      }
-
-      const item = itemById(panel.itemId);
-      const now = new Date().toISOString();
-
-      // v23: 新しく開始する時は、項目に関係なく他の計測中作業をすべて自動終了する。
-      // 停止し忘れた作業が、後から数時間分として伸びる事故を防ぐ。
-      stopOtherRunningPanels(panel.id, now);
-
-      // v23: 終了後に同じパネルで再度開始しても、過去の記録を延長しない。
-      // 毎回、新しい開始操作として新規記録を作る。
-      const runId = crypto.randomUUID();
-      const log = {
-        id: crypto.randomUUID(),
-        panelRunId: runId,
-        itemId: item ? item.id : null,
-        itemName: resolvedPanelItemName(panel),
-        start: now,
-        end: now,
-        date: dateKey(new Date(now)),
-        durationMs: 0
-      };
-      state.logs.push(log);
-
-      panel.runningSince = now;
-      panel.activeLogId = log.id;
-      panel.lastLogId = log.id;
-      panel.panelRunId = runId;
-
-      // 開始したら、次の作業をすぐ始められるように空パネルを1つ自動追加する。
-      const hasEmptyPanel = state.panels.some(p =>
-        p.id !== panel.id && !p.runningSince && !p.itemId && !p.customName && !p.activeLogId && !p.lastLogId
-      );
-      if (!hasEmptyPanel) {
-        state.panels.push(createEmptyPanel());
-      }
-
-      saveState();
-      renderAll();
+      const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
+      const now = nowIso();
+      panel.start = panel.start || now;
+      panel.end = now;
+      panel.running = true;
+      panel.completed = false;
+      panel.date = dateKey(new Date(panel.start));
+      ensureLogLinks();
+      const hasEmpty = state.panels.some(p=>p.id!==panel.id && !p.start && !p.itemId && !p.customName);
+      if (!hasEmpty) state.panels.push(newPanel());
+      saveState(); renderAll();
     }
 
     function stopPanel(id) {
-      const panel = state.panels.find(p => p.id === id);
-      if (!panel || !panel.runningSince) return;
-
-      stopRunningPanelObject(panel, new Date().toISOString());
-
-      saveState();
-      renderAll();
+      const panel = state.panels.find(p=>p.id===id); if (!panel || !panel.running) return;
+      panel.end = nowIso();
+      panel.running = false;
+      panel.completed = true;
+      ensureLogLinks();
+      saveState(); renderAll();
     }
 
     function updatePanelTime(panelId, field, value) {
-      const panel = state.panels.find(p => p.id === panelId);
-      if (!panel) return;
-
-      const log = getPanelLog(panel);
-      if (!log) return;
-
-      const baseIso = field === "start" ? log.start : (log.end || log.start);
-      const iso = localTimeToIso(value, baseIso);
-      if (!iso) return;
-
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || !panel.start) return;
+      const base = field === "start" ? panel.start : (panel.end || panel.start);
+      const iso = localTimeToIso(value, base); if (!iso) return;
       if (field === "start") {
-        log.start = iso;
-        if (panel.runningSince) panel.runningSince = iso;
+        panel.start = iso;
+        panel.date = dateKey(new Date(iso));
+        if (!panel.end || new Date(panel.end) < new Date(panel.start)) panel.end = panel.start;
       } else {
-        log.end = iso;
+        panel.end = iso;
       }
-
-      recalcLog(log);
-      saveState();
-      renderAll();
+      ensureLogLinks(); saveState(); renderAll();
     }
 
-    function createItem(name, kana) {
-      const item = { id: crypto.randomUUID(), name: name.trim(), kana: kana.trim() };
-      state.items.push(item);
-      return item;
-    }
-
-    function addItemFromDialog() {
-      const name = $("newItemName").value.trim();
-      const kana = $("newItemKana").value.trim();
-      if (!name || !kana) {
-        alert("項目名とふりがなを両方入力してください。");
-        return;
-      }
-      createItem(name, kana);
-      $("newItemName").value = "";
-      $("newItemKana").value = "";
-      saveState();
-      renderAll();
-    }
-    function editItem(id) {
-      const item = itemById(id);
-      if (!item) return;
-
-      const name = prompt("項目名", item.name);
-      if (!name || !name.trim()) return;
-
-      const kana = prompt("ふりがな", item.kana || item.name);
-      if (!kana || !kana.trim()) return;
-
-      const oldName = item.name;
-      item.name = name.trim();
-      item.kana = kana.trim();
-
-      if (confirm("過去の記録にも新しい項目名を反映しますか？")) {
-        state.logs.forEach(l => {
-          if (l.itemId === item.id || l.itemName === oldName) l.itemName = item.name;
-        });
-      }
-
-      saveState();
-      renderAll();
-    }
-
-    function deleteItem(id) {
-      const item = itemById(id);
-      if (!item) return;
-
-      const isRunning = state.panels.some(p => p.itemId === id && p.runningSince);
-      if (isRunning) {
-        alert("計測中の項目は削除できません。先に終了してください。");
-        return;
-      }
-
-      if (!confirm(`「${item.name}」をプルダウンから削除しますか？過去の記録は残ります。`)) return;
-
-      state.items = state.items.filter(i => i.id !== id);
-      state.panels.forEach(p => {
-        if (p.itemId === id) {
-          p.itemId = null;
-          p.activeLogId = null;
-          p.lastLogId = null;
-        }
-      });
-
-      saveState();
-      renderAll();
-    }
-
-    function exportCsv() {
-      const format = $("exportFormat")?.value || "csv";
-      const logs = [...state.logs].sort((a,b) => new Date(a.start) - new Date(b.start));
-
-      if (format === "excel") {
-        exportExcelFile(logs, `作業タイマー記録_${dateKey()}.xls`);
-      } else {
-        exportCsvFile(logs, `作業タイマー記録_${dateKey()}.csv`);
-      }
-    }
-
-    function exportMonthCsv() {
-      const targetMonth = $("monthFilter")?.value || monthKey();
-      const format = $("exportFormat")?.value || "csv";
-      const logs = state.logs
-        .filter(l => (l.date || dateKey(new Date(l.start))).slice(0, 7) === targetMonth)
-        .sort((a,b) => new Date(a.start) - new Date(b.start));
-
-      if (format === "excel") {
-        exportExcelFile(logs, `作業タイマー記録_${targetMonth}.xls`);
-      } else {
-        exportCsvFile(logs, `作業タイマー記録_${targetMonth}.csv`);
-      }
-    }
-
-    function clearMonthLogs() {
-      const targetMonth = $("monthFilter")?.value || monthKey();
-      if (!confirm(`${monthLabel(targetMonth)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return;
-
-      const removeIds = new Set(
-        state.logs
-          .filter(l => (l.date || dateKey(new Date(l.start))).slice(0, 7) === targetMonth)
-          .map(l => l.id)
-      );
-
-      state.logs = state.logs.filter(l =>
-        (l.date || dateKey(new Date(l.start))).slice(0, 7) !== targetMonth
-      );
-
-      state.panels.forEach(p => {
-        if (removeIds.has(p.activeLogId)) {
-          p.activeLogId = null;
-          p.runningSince = null;
-        }
-        if (removeIds.has(p.lastLogId)) p.lastLogId = null;
-      });
-
-      saveState();
-      renderAll();
-    }
-
-
+    function createItem(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; state.items.push(item); return item; }
+    function addItemFromDialog() { const name=$("newItemName").value.trim(); const kana=$("newItemKana").value.trim(); if(!name||!kana){ alert("項目名とふりがなを両方入力してください。"); return; } createItem(name,kana); $("newItemName").value=""; $("newItemKana").value=""; saveState(); renderAll(); }
+    function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); ensureLogLinks(); saveState(); renderAll(); }
+    function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」をプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); ensureLogLinks(); saveState(); renderAll(); }
 
     function exportCsvFile(logs, filename) {
       const rows = [["日付","項目","開始時間","終了時間","分"]];
-      [...logs]
-        .sort((a,b) => new Date(a.start) - new Date(b.start))
-        .forEach(l => {
-          rows.push([
-            l.date,
-            l.itemName,
-            timeText(l.start),
-            timeText(l.end),
-            Math.round(l.durationMs / 60000)
-          ]);
-        });
-
-      const csv = rows
-        .map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(","))
-        .join("\n");
-
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      logs.sort((a,b)=>new Date(a.start)-new Date(b.start)).forEach(l=>rows.push([l.date,l.itemName,timeText(l.start),timeText(l.end),Math.round(l.durationMs/60000)]));
+      const csv = rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
     }
-
-    function escapeExcelCell(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;");
-    }
-
+    function escapeExcelCell(value) { return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
     function exportExcelFile(logs, filename) {
-      const sorted = [...logs].sort((a,b) => new Date(a.start) - new Date(b.start));
-
-      const rows = sorted.map(l => `
-        <tr>
-          <td>${escapeExcelCell(l.date)}</td>
-          <td>${escapeExcelCell(l.itemName)}</td>
-          <td>${escapeExcelCell(timeText(l.start))}</td>
-          <td>${escapeExcelCell(timeText(l.end))}</td>
-          <td style="mso-number-format:'0';">${Math.round(l.durationMs / 60000)}</td>
-        </tr>
-      `).join("");
-
-      const htmlTable = `
-        <html>
-        <head>
-          <meta charset="utf-8">
-        </head>
-        <body>
-          <table border="1">
-            <thead>
-              <tr>
-                <th>日付</th>
-                <th>項目</th>
-                <th>開始時間</th>
-                <th>終了時間</th>
-                <th>分</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `;
-
-      const blob = new Blob(["\uFEFF" + htmlTable], { type: "application/vnd.ms-excel;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const rows = logs.sort((a,b)=>new Date(a.start)-new Date(b.start)).map(l=>`<tr><td>${escapeExcelCell(l.date)}</td><td>${escapeExcelCell(l.itemName)}</td><td>${escapeExcelCell(timeText(l.start))}</td><td>${escapeExcelCell(timeText(l.end))}</td><td style="mso-number-format:'0';">${Math.round(l.durationMs/60000)}</td></tr>`).join("");
+      const html = `<html><head><meta charset="utf-8"></head><body><table border="1"><thead><tr><th>日付</th><th>項目</th><th>開始時間</th><th>終了時間</th><th>分</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+      const blob = new Blob(["\uFEFF"+html], {type:"application/vnd.ms-excel;charset=utf-8"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
     }
-
-    function clearVisibleLogs() {
-      const targetDate = $("dateFilter").value || dateKey();
-      if (!confirm(`${targetDate} の記録を削除しますか？`)) return;
-
-      const removeIds = new Set(state.logs.filter(l => l.date === targetDate).map(l => l.id));
-      state.logs = state.logs.filter(l => l.date !== targetDate);
-
-      state.panels.forEach(p => {
-        if (removeIds.has(p.activeLogId)) {
-          p.activeLogId = null;
-          p.runningSince = null;
-        }
-        if (removeIds.has(p.lastLogId)) p.lastLogId = null;
-      });
-
-      saveState();
-      renderAll();
-    }
+    function exportMonthCsv() { const target=$("monthFilter")?.value||monthKey(); const fmt=$("exportFormat")?.value||"csv"; const logs=currentLogsForCalc().filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target); fmt==="excel" ? exportExcelFile(logs,`作業タイマー記録_${target}.xls`) : exportCsvFile(logs,`作業タイマー記録_${target}.csv`); }
+    function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); state.panels=state.panels.filter(p=>!removeIds.has(p.id)); if(!state.panels.length) state.panels.push(newPanel()); saveState(); renderAll(); }
 
     $("addPanelBtn").addEventListener("click", () => addPanel(true));
-    $("openItemDialogBtn").addEventListener("click", () => {
-      renderItemManageList();
-      $("itemDialog").showModal();
-    });
+    $("openItemDialogBtn").addEventListener("click", () => { renderItemManageList(); $("itemDialog").showModal(); });
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
-    $("newItemKana").addEventListener("keydown", e => { if (e.key === "Enter") addItemFromDialog(); });
-
-    $("todayBtn").addEventListener("click", () => {
-      $("dateFilter").value = dateKey();
-      renderLogs();
-    });
+    $("newItemKana").addEventListener("keydown", e => { if(e.key==="Enter") addItemFromDialog(); });
+    $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); });
     $("dateFilter").addEventListener("change", renderLogs);
-    $("clearLogsBtn")?.addEventListener("click", clearVisibleLogs);
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
     $("clearMonthBtn").addEventListener("click", clearMonthLogs);
     $("monthFilter").addEventListener("change", () => saveState());
 
     document.body.addEventListener("change", e => {
-      const el = e.target;
-      if (el.dataset.selectPanel) changePanelItem(el.dataset.selectPanel, el.value);
-      if (el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
-      if (el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
-      if (el.dataset.customName) updatePanelCustomName(el.dataset.customName, el.value, true);
+      const el=e.target;
+      if(el.dataset.selectPanel) changePanelItem(el.dataset.selectPanel, el.value);
+      if(el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
+      if(el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
     });
-
-    document.body.addEventListener("input", e => {
-      const el = e.target;
-      if (el.dataset.customName) updatePanelCustomName(el.dataset.customName, el.value, false);
-    });
-
+    document.body.addEventListener("input", e => { const el=e.target; if(el.dataset.customName) changeCustomName(el.dataset.customName, el.value); });
     document.body.addEventListener("click", e => {
-      const el = e.target;
-      if (el.dataset.start) startPanel(el.dataset.start);
-      if (el.dataset.stop) stopPanel(el.dataset.stop);
-      if (el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
-      if (el.dataset.editItem) editItem(el.dataset.editItem);
-      if (el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
+      const el=e.target;
+      if(el.dataset.start) startPanel(el.dataset.start);
+      if(el.dataset.stop) stopPanel(el.dataset.stop);
+      if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
+      if(el.dataset.editItem) editItem(el.dataset.editItem);
+      if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
     });
 
-    window.addEventListener("pagehide", stopRunningOnPageLeave);
-    window.addEventListener("beforeunload", stopRunningOnPageLeave);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") {
-        stopRunningOnPageLeave();
-      }
-    });
-
-    checkDateRollover(false);
-    recoverRunningFromPreviousSession();
-
+    finalizeIfDateChanged();
     $("dateFilter").value = dateKey();
     saveState();
     renderAll();
 
-    let lastHeartbeatSave = 0;
     setInterval(() => {
-      if (checkDateRollover(true)) return;
-      const hasRunning = state.panels.some(panel => panel.runningSince);
+      if (finalizeIfDateChanged()) return;
+      let changed = false;
       state.panels.forEach(panel => {
-        if (!panel.runningSince) return;
-        const log = getPanelLog(panel);
-        const node = document.querySelector(`[data-elapsed="${panel.id}"]`);
-        if (node && log) node.textContent = durationText(Date.now() - new Date(log.start).getTime());
+        if (!panel.running || !panel.start) return;
+        const node=document.querySelector(`[data-elapsed="${panel.id}"]`);
+        if(node) node.textContent = durationText(Date.now() - new Date(panel.start).getTime());
+        const log=logById(panel.id);
+        if(log){ log.end=nowIso(); recalcLog(log); changed=true; }
       });
-
-      if (hasRunning && Date.now() - lastHeartbeatSave > 10000) {
-        lastHeartbeatSave = Date.now();
-        saveState();
-      }
+      if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderSummary(); renderLogs();
     }, 1000);
+
   </script>
 </body>
 </html>
-<!-- retry -->
