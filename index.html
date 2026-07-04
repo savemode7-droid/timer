@@ -1,3 +1,20 @@
+<!--
+==================================================
+作業タイマー
+Version : v30-20260704-1555
+Base    : v29
+Date    : 2026-07-04 15:55
+
+Changes
+- ソース先頭にバージョンコメントを追加
+- 記録日と今日ボタンを記録パネル上部へ配置
+- レイアウト順を 作業パネル → 記録 → 合計 → 出力 に変更
+- 合計を「表示日・今週（月〜日）・今月」の1行表示に変更
+- 完了パネルを「開始・終了・作業」の1行表示に変更
+- 完了後も項目・手入力・開始・終了を編集可能に変更
+- 表示と保存処理を整理し、パネル＝ログ1件の構造を維持
+==================================================
+-->
 <!doctype html>
 <html lang="ja">
 <head>
@@ -784,13 +801,70 @@
   font-variant-numeric: tabular-nums;
 }
 
+
+/* v30: compact summary and editable time line */
+.period-summary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: #1e40af;
+  padding: 6px 2px;
+  font-variant-numeric: tabular-nums;
+}
+.period-summary span {
+  display: inline-block;
+}
+.work-time-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
+  margin-top: 6px;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #334155;
+}
+.work-time-line input[type="time"] {
+  width: 82px;
+  min-width: 82px;
+  height: 28px;
+  padding: 3px 4px;
+  font-size: 11px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.work-time-label {
+  color: #64748b;
+  font-weight: 800;
+}
+.work-duration {
+  color: #0f172a;
+  font-weight: 900;
+}
+.timer-panel.completed .item-input-row select,
+.timer-panel.completed .item-input-row input {
+  background: #fff;
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v29-20260704-1519</span>
+      <span class="app-version">v30-20260704-1555</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -805,17 +879,17 @@
     </section>
 
     <section class="card">
-      <h2 class="section-title">今日の合計</h2>
-      <div id="summary"></div>
-    </section>
-
-    <section class="card">
       <h2 class="section-title">記録</h2>
       <div class="date-row">
         <input id="dateFilter" type="date" />
         <button class="secondary" id="todayBtn">今日</button>
       </div>
       <div id="logs"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="section-title">合計</h2>
+      <div id="summary"></div>
     </section>
 
     <section class="card">
@@ -1034,18 +1108,22 @@
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
         const title = completed ? `完了${index + 1}` : `作業${index + 1}`;
-        const controls = completed ? `
-            <div class="done-summary">
-              <div class="done-box"><span class="done-label">開始</span><span class="done-value">${timeText(panel.start)}</span></div>
-              <div class="done-box"><span class="done-label">終了</span><span class="done-value">${timeText(panel.end)}</span></div>
-              <div class="done-box"><span class="done-label">作業時間</span><span class="done-value">${durationJa(elapsed)}</span></div>
-            </div>
-          ` : `
+        const actionControls = completed ? `` : `
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
               <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
             </div>
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
+          `;
+        const timeLine = `
+            <div class="work-time-line">
+              <span class="work-time-label">開始</span>
+              <input type="time" step="1" data-start-time="${panel.id}" value="${timeOnlyValue(panel.start)}" ${!panel.start ? "disabled" : ""} />
+              <span class="work-time-label">終了</span>
+              <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panel.end)}" ${!panel.start ? "disabled" : ""} />
+              <span class="work-time-label">作業</span>
+              <span class="work-duration">${durationJa(elapsed)}</span>
+            </div>
           `;
 
         return `
@@ -1056,22 +1134,12 @@
             </div>
 
             <div class="item-input-row">
-              <select data-select-panel="${panel.id}" ${completed ? "disabled" : ""}>${itemOptions(panel.itemId)}</select>
-              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" ${completed ? "disabled" : ""} />
+              <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
+              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
             </div>
 
-            ${controls}
-
-            <div class="time-edit">
-              <div class="time-box">
-                <label>開始時間</label>
-                <input type="time" step="1" data-start-time="${panel.id}" value="${timeOnlyValue(panel.start)}" ${!panel.start ? "disabled" : ""} />
-              </div>
-              <div class="time-box">
-                <label>終了時間</label>
-                <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panel.end)}" ${!panel.start ? "disabled" : ""} />
-              </div>
-            </div>
+            ${actionControls}
+            ${timeLine}
           </div>
         `;
       }).join("");
@@ -1092,15 +1160,43 @@
       return state.logs.map(l => ({...l, end: (state.panels.find(p=>p.id===l.id)?.running ? nowIso() : l.end)})).map(l => { recalcLog(l); return l; });
     }
 
+    function startOfWeekMonday(d) {
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const day = x.getDay();
+      const diff = (day + 6) % 7;
+      x.setDate(x.getDate() - diff);
+      x.setHours(0,0,0,0);
+      return x;
+    }
+
     function renderSummary() {
-      const today = dateKey();
-      const totalMs = currentLogsForCalc()
-        .filter(l => l.date === today)
+      const targetDate = $("dateFilter")?.value || dateKey();
+      const baseDate = new Date(`${targetDate}T00:00:00`);
+      const weekStart = startOfWeekMonday(baseDate);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      const targetMonth = targetDate.slice(0, 7);
+
+      const logs = currentLogsForCalc();
+      const dateTotal = logs
+        .filter(l => l.date === targetDate)
+        .reduce((sum, l) => sum + l.durationMs, 0);
+      const weekTotal = logs
+        .filter(l => {
+          const d = new Date(`${l.date}T00:00:00`);
+          return d >= weekStart && d <= weekEnd;
+        })
+        .reduce((sum, l) => sum + l.durationMs, 0);
+      const monthTotal = logs
+        .filter(l => (l.date || "").slice(0, 7) === targetMonth)
         .reduce((sum, l) => sum + l.durationMs, 0);
 
-      $("summary").innerHTML = totalMs > 0
-        ? `<div class="total-summary">${durationJa(totalMs)}</div>`
-        : `<div class="empty">今日の記録はまだありません。</div>`;
+      $("summary").innerHTML = `
+        <div class="period-summary">
+          <span>合計 ${durationJa(dateTotal)}</span>
+          <span>今週 ${durationJa(weekTotal)}</span>
+          <span>今月 ${durationJa(monthTotal)}</span>
+        </div>`;
     }
 
     function renderMonthFilter() {
@@ -1138,14 +1234,14 @@
     function updateLogFromPanel(panel) { ensureLogLinks(); }
 
     function changePanelItem(panelId, itemId) {
-      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.completed) return;
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
       panel.itemId = itemId || null;
       updateLogFromPanel(panel);
       saveState(); renderAll();
     }
 
     function changeCustomName(panelId, value) {
-      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.completed) return;
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
       panel.customName = value || "";
       updateLogFromPanel(panel);
       saveState();
@@ -1220,8 +1316,8 @@
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
     $("newItemKana").addEventListener("keydown", e => { if(e.key==="Enter") addItemFromDialog(); });
-    $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); });
-    $("dateFilter").addEventListener("change", renderLogs);
+    $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); renderSummary(); });
+    $("dateFilter").addEventListener("change", () => { renderLogs(); renderSummary(); });
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
     $("clearMonthBtn").addEventListener("click", clearMonthLogs);
     $("monthFilter").addEventListener("change", () => saveState());
