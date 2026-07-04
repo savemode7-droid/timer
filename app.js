@@ -1,4 +1,4 @@
-// Timer App app.js v38
+// Timer App app.js v38.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -84,7 +84,7 @@
       target.panels.forEach(panel => {
         // v38: 記録との連動は「手入力のみ・未分類」カードだけに限定する。
         // 項目選択ありカードは、開始のたびにカード非連動の記録を作成する。
-        const shouldLink = !!panel.linkedToLog || (!panel.itemId && !!panel.start);
+        const shouldLink = !!panel.linkedToLog;
         if (!shouldLink || !panel.start) return;
 
         let log = target.logs.find(l => l.panelId === panel.id || l.id === panel.id);
@@ -406,14 +406,53 @@
     }
 
     function updateLogFromPanel(panel) {
-      ensureLogLinks();
-      const log = panel.activeLogId ? logById(panel.activeLogId) : null;
-      if (log) {
-        log.itemId = panel.itemId || null;
-        log.customName = panel.customName || "";
-        log.itemName = buildItemName(panel);
-        recalcLog(log);
+      // v38.1:
+      // 未分類で開始したカードは一旦「記録と連動」。
+      // 完了後に項目を選択したら連動を解除し、カード削除でも記録は残す。
+      // 手入力のみの場合は連動を維持し、カード削除で記録も削除する。
+      let log = null;
+      if (panel.activeLogId) log = logById(panel.activeLogId);
+      if (!log && panel.lastLogId) log = logById(panel.lastLogId);
+      if (!log && panel.linkedToLog) log = state.logs.find(l => l.panelId === panel.id || l.id === panel.id);
+
+      if (!log && panel.start && panel.linkedToLog) {
+        log = {
+          id: panel.id,
+          panelId: panel.id,
+          itemId: panel.itemId || null,
+          customName: panel.customName || "",
+          itemName: buildItemName(panel),
+          start: panel.start,
+          end: panel.end || panel.start,
+          date: panel.date || dateKey(new Date(panel.start)),
+          durationMs: 0,
+          completed: !!panel.completed
+        };
+        state.logs.push(log);
+        panel.lastLogId = log.id;
       }
+
+      if (!log) return;
+
+      if (panel.completed && panel.itemId) {
+        // 完了後に項目を選択した場合は、定番項目扱いとして記録の連動を解除する。
+        log.panelId = null;
+        panel.linkedToLog = false;
+      } else if (panel.completed && !panel.itemId) {
+        // 手入力のみ、または未分類のままなら連動を維持する。
+        log.panelId = panel.id;
+        panel.linkedToLog = true;
+      }
+
+      log.itemId = panel.itemId || null;
+      log.customName = panel.customName || "";
+      log.itemName = buildItemName(panel);
+      log.start = panel.start || log.start;
+      log.end = panel.running ? nowIso() : (panel.end || log.end || log.start);
+      log.date = panel.date || dateKey(new Date(log.start));
+      log.completed = !!panel.completed;
+      recalcLog(log);
+      panel.lastLogId = log.id;
     }
 
     function changePanelItem(panelId, itemId) {
