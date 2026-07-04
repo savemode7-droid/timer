@@ -707,13 +707,19 @@
   white-space: nowrap;
 }
 
+
+/* v24: panel inline item add removed */
+.timer-panel > select[data-select-panel] {
+  margin-top: 6px;
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v23-20260704-1016</span>
+      <span class="app-version">v24-20260704-1018</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -1050,17 +1056,6 @@
               </div>
             </div>
 
-            <details class="inline-add bottom-add">
-              <summary>＋ 項目を追加</summary>
-              <div class="inline-add-body">
-                <div class="stack">
-                  <input data-direct-name="${panel.id}" placeholder="項目名" ${running ? "disabled" : ""} />
-                  <input data-direct-kana="${panel.id}" placeholder="ふりがな" ${running ? "disabled" : ""} />
-                  <button class="secondary" data-direct-add="${panel.id}" ${running ? "disabled" : ""}>追加して選択</button>
-                </div>
-              </div>
-            </details>
-
             <select data-select-panel="${panel.id}">
               ${options}
             </select>
@@ -1311,32 +1306,6 @@
       saveState();
       renderAll();
     }
-
-    function addItemFromPanel(panelId) {
-      const nameInput = document.querySelector(`[data-direct-name="${panelId}"]`);
-      const kanaInput = document.querySelector(`[data-direct-kana="${panelId}"]`);
-      const name = nameInput?.value.trim();
-      const kana = kanaInput?.value.trim();
-
-      if (!name || !kana) {
-        alert("項目名とふりがなを両方入力してください。");
-        return;
-      }
-
-      const item = createItem(name, kana);
-      const panel = state.panels.find(p => p.id === panelId);
-      if (panel) {
-        panel.itemId = item.id;
-        const log = getPanelLog(panel);
-        if (log) {
-          log.itemId = item.id;
-          log.itemName = item.name;
-        }
-      }
-      saveState();
-      renderAll();
-    }
-
     function editItem(id) {
       const item = itemById(id);
       if (!item) return;
@@ -1570,7 +1539,6 @@
       if (el.dataset.start) startPanel(el.dataset.start);
       if (el.dataset.stop) stopPanel(el.dataset.stop);
       if (el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
-      if (el.dataset.directAdd) addItemFromPanel(el.dataset.directAdd);
       if (el.dataset.editItem) editItem(el.dataset.editItem);
       if (el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
     });
