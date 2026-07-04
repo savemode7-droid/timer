@@ -1,4 +1,4 @@
-// Timer App app.js v39
+// Timer App app.js v38.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -119,7 +119,19 @@
     function itemById(id) { return state.items.find(i=>i.id===id); }
     function logById(id) { return state.logs.find(l=>l.id===id || l.panelId===id); }
 
-function recalcLog(log) {
+    function buildItemName(panel, items = state.items) {
+      const item = items.find(i=>i.id===panel.itemId);
+      const base = item ? item.name : "";
+      const free = (panel.customName || "").trim();
+      // v37.1: ドロップダウン選択と手入力が両方ある場合は、スペースなしで結合する。
+      // 例: ゲーム + 33 => ゲーム33
+      if (base && free) return `${base}${free}`;
+      if (base) return base;
+      if (free) return free;
+      return "未分類";
+    }
+
+    function recalcLog(log) {
       const startMs = new Date(log.start).getTime();
       const endMs = new Date(log.end || log.start).getTime();
       log.durationMs = Math.max(0, endMs - startMs);
@@ -169,7 +181,109 @@ function recalcLog(log) {
       return true;
     }
 
- currentLogsForCalc() {
+    function sortedPanelsForDisplay() {
+      return [...state.panels].sort((a,b) => {
+        const groupA = a.completed ? 1 : 0;
+        const groupB = b.completed ? 1 : 0;
+        if (groupA !== groupB) return groupA - groupB;
+        const ta = a.start ? new Date(a.start).getTime() : 0;
+        const tb = b.start ? new Date(b.start).getTime() : 0;
+        return tb - ta;
+      });
+    }
+
+    function renderPanels() {
+      const list = $("panelList");
+      if (!state.panels.length) state.panels.push(newPanel());
+
+      const allPanels = sortedPanelsForDisplay();
+      const workPanels = allPanels.filter(panel => !panel.completed);
+      const completedPanels = allPanels.filter(panel => panel.completed);
+
+      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, completedCollapsed: true };
+      const workCollapsed = !!state.panelGroups.workCollapsed;
+      const completedCollapsed = state.panelGroups.completedCollapsed !== false;
+
+      const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
+
+      function renderGroupHeader(kind, label, count, collapsed) {
+        return `
+          <div class="panel-group-head ${kind}" data-toggle-panel-group="${kind}" title="タップで開閉">
+            <span>${collapsed ? "▶" : "▼"} ${label}</span>
+            <span class="panel-group-count">${count}件</span>
+          </div>
+        `;
+      }
+
+      function renderPanelCard(panel, title) {
+        const running = !!panel.running;
+        const completed = !!panel.completed;
+        const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
+        const canComplete = !!panel.itemId && !!panel.start && !running;
+        const completeButton = panel.itemId ? `<button class="complete-btn" data-complete-panel="${panel.id}" ${canComplete ? "" : "disabled"}>完了</button>` : "";
+        const actionControls = completed ? `` : `
+            <div class="main-actions ${panel.itemId ? "three-actions" : ""}">
+              <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
+              <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
+              ${completeButton}
+            </div>
+            <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
+          `;
+        const timeLine = `
+            <div class="work-time-line">
+              <span class="work-time-label">開始</span>
+              <input type="time" step="1" data-start-time="${panel.id}" value="${timeOnlyValue(panel.start)}" ${!panel.start ? "disabled" : ""} />
+              <span class="work-time-label">終了</span>
+              <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panel.end)}" ${!panel.start ? "disabled" : ""} />
+              <span class="work-time-label">作業</span>
+              <span class="work-duration">${durationJa(elapsed)}</span>
+            </div>
+          `;
+
+        return `
+          <div class="timer-panel ${completed ? "completed" : ""}">
+            <div class="panel-head">
+              <div><div class="panel-title">${title}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
+              <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
+            </div>
+
+            <div class="item-input-row">
+              <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
+              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
+            </div>
+
+            ${actionControls}
+            ${timeLine}
+          </div>
+        `;
+      }
+
+      let html = "";
+      html += renderGroupHeader("work", "作業", workPanels.length, workCollapsed);
+      if (!workCollapsed) {
+        let workCount = 0;
+        html += workPanels.map(panel => renderPanelCard(panel, `作業${++workCount}`)).join("");
+      }
+
+      html += renderGroupHeader("completed", "完了", completedPanels.length, completedCollapsed);
+      if (!completedCollapsed) {
+        html += completedPanels.map(panel => renderPanelCard(panel, escapeHtml(buildItemName(panel)))).join("");
+      }
+
+      list.innerHTML = html;
+    }
+
+    function renderItemManageList() {
+      const area = $("itemManageList");
+      const items = sortedItems();
+      area.innerHTML = items.length ? items.map(item => `
+        <div class="item-card">
+          <div class="item-line"><span class="item-name">${escapeHtml(item.name)}</span><span class="item-kana">${escapeHtml(item.kana)}</span></div>
+          <div class="item-actions"><button class="ghost mini-btn" data-edit-item="${item.id}">編集</button><button class="danger mini-btn" data-delete-item="${item.id}">削除</button></div>
+        </div>`).join("") : `<div class="empty">項目はまだありません。</div>`;
+    }
+
+    function currentLogsForCalc() {
       ensureLogLinks();
       return state.logs.map(l => {
         const runningPanel = state.panels.find(p => p.running && p.activeLogId === l.id);
@@ -179,9 +293,304 @@ function recalcLog(log) {
       });
     }
 
-derAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
+    function startOfWeekMonday(d) {
+      const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const day = x.getDay();
+      const diff = (day + 6) % 7;
+      x.setDate(x.getDate() - diff);
+      x.setHours(0,0,0,0);
+      return x;
+    }
 
-openItemDialogBtn").addEventListener("click", () => { renderItemManageList(); $("itemDialog").showModal(); });
+    function renderSummary() {
+      const today = dateKey();
+      const targetMonth = monthKey();
+      const baseDate = new Date(`${today}T00:00:00`);
+      const weekStart = startOfWeekMonday(baseDate);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+
+      const logs = currentLogsForCalc();
+      const todayTotal = logs
+        .filter(l => l.date === today)
+        .reduce((sum, l) => sum + l.durationMs, 0);
+      const weekTotal = logs
+        .filter(l => {
+          const d = new Date(`${l.date}T00:00:00`);
+          return d >= weekStart && d <= weekEnd;
+        })
+        .reduce((sum, l) => sum + l.durationMs, 0);
+      const monthTotal = logs
+        .filter(l => (l.date || "").slice(0, 7) === targetMonth)
+        .reduce((sum, l) => sum + l.durationMs, 0);
+
+      $("summary").innerHTML = `
+        <div class="period-summary cell-line">
+          <span class="summary-cell-label">今日</span><span class="summary-cell-value">${durationJa(todayTotal)}</span>
+          <span class="summary-cell-label">今週</span><span class="summary-cell-value">${durationJa(weekTotal)}</span>
+          <span class="summary-cell-label">今月</span><span class="summary-cell-value">${durationJa(monthTotal)}</span>
+        </div>`;
+    }
+
+    function renderMonthFilter() {
+      const select = $("monthFilter");
+      const months = [...new Set(state.logs.map(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)))].filter(Boolean).sort();
+      const current = select.value || monthKey();
+      if (!months.includes(monthKey())) months.push(monthKey());
+      months.sort();
+      select.innerHTML = months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join("");
+      select.value = months.includes(current) ? current : monthKey();
+    }
+
+    function renderLogs() {
+      const targetDate = $("dateFilter").value || dateKey();
+      const logs = currentLogsForCalc().filter(l=>l.date===targetDate).sort((a,b)=>new Date(a.start)-new Date(b.start));
+      $("logs").innerHTML = logs.length
+        ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th><th class="log-action-cell">操作</th></tr></thead><tbody>` +
+          logs.map(l=>{
+            const hasPanel = !!l.panelId && state.panels.some(p => p.id === l.panelId);
+            const action = hasPanel
+              ? `<button class="log-icon-btn locked" data-log-locked="${l.id}" title="作業パネルがあるため削除できません">🔒</button>`
+              : `<button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
+            return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
+          }).join("") +
+          `</tbody></table>`
+        : `<div class="empty">この日の記録はありません。</div>`;
+    }
+
+    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
+
+    function addPanel(shouldRender=true) { state.panels.push(newPanel()); saveState(); if (shouldRender) renderAll(); }
+
+    function deletePanel(id) {
+      const panel = state.panels.find(p=>p.id===id);
+      if (!panel) return;
+      const linkedLogs = state.logs.filter(l => l.panelId === id);
+      const hasLinkedLog = linkedLogs.length > 0;
+      const msg = hasLinkedLog
+        ? "この作業パネルと、このパネルに紐づく記録を削除します。よろしいですか？"
+        : "この作業パネルを削除しますか？記録は残ります。";
+      if (!confirm(msg)) return;
+      state.panels = state.panels.filter(p=>p.id!==id);
+      // v38: 項目選択ありカードの記録はカード非連動なので消さない。
+      // 手入力のみ・未分類カードの連動記録だけ消す。
+      if (hasLinkedLog) state.logs = state.logs.filter(l=>l.panelId!==id);
+      if (!state.panels.length) state.panels.push(newPanel());
+      saveState(); renderAll();
+    }
+
+    function deleteLog(id) {
+      const hasPanel = state.logs.some(l => (l.id === id || l.panelId === id) && l.panelId && state.panels.some(p => p.id === l.panelId));
+      if (hasPanel) {
+        alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
+        return;
+      }
+      const log = state.logs.find(l => l.id === id || l.panelId === id);
+      if (!log) return;
+      if (!confirm("この記録を削除しますか？")) return;
+      state.logs = state.logs.filter(l => l.id !== id && l.panelId !== id);
+      saveState();
+      renderAll();
+    }
+
+    function showLockedLogMessage() {
+      alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
+    }
+
+    function togglePanelGroup(kind) {
+      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, completedCollapsed: true };
+      if (kind === "work") state.panelGroups.workCollapsed = !state.panelGroups.workCollapsed;
+      if (kind === "completed") state.panelGroups.completedCollapsed = !state.panelGroups.completedCollapsed;
+      saveState();
+      renderAll();
+    }
+
+    function updateLogFromPanel(panel) {
+      // v38.1:
+      // 未分類で開始したカードは一旦「記録と連動」。
+      // 完了後に項目を選択したら連動を解除し、カード削除でも記録は残す。
+      // 手入力のみの場合は連動を維持し、カード削除で記録も削除する。
+      let log = null;
+      if (panel.activeLogId) log = logById(panel.activeLogId);
+      if (!log && panel.lastLogId) log = logById(panel.lastLogId);
+      if (!log && panel.linkedToLog) log = state.logs.find(l => l.panelId === panel.id || l.id === panel.id);
+
+      if (!log && panel.start && panel.linkedToLog) {
+        log = {
+          id: panel.id,
+          panelId: panel.id,
+          itemId: panel.itemId || null,
+          customName: panel.customName || "",
+          itemName: buildItemName(panel),
+          start: panel.start,
+          end: panel.end || panel.start,
+          date: panel.date || dateKey(new Date(panel.start)),
+          durationMs: 0,
+          completed: !!panel.completed
+        };
+        state.logs.push(log);
+        panel.lastLogId = log.id;
+      }
+
+      if (!log) return;
+
+      if (panel.completed && panel.itemId) {
+        // 完了後に項目を選択した場合は、定番項目扱いとして記録の連動を解除する。
+        log.panelId = null;
+        panel.linkedToLog = false;
+      } else if (panel.completed && !panel.itemId) {
+        // 手入力のみ、または未分類のままなら連動を維持する。
+        log.panelId = panel.id;
+        panel.linkedToLog = true;
+      }
+
+      log.itemId = panel.itemId || null;
+      log.customName = panel.customName || "";
+      log.itemName = buildItemName(panel);
+      log.start = panel.start || log.start;
+      log.end = panel.running ? nowIso() : (panel.end || log.end || log.start);
+      log.date = panel.date || dateKey(new Date(log.start));
+      log.completed = !!panel.completed;
+      recalcLog(log);
+      panel.lastLogId = log.id;
+    }
+
+    function changePanelItem(panelId, itemId) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.itemId = itemId || null;
+      updateLogFromPanel(panel);
+      saveState(); renderAll();
+    }
+
+    function changeCustomName(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.customName = value || "";
+      updateLogFromPanel(panel);
+      saveState();
+      // v28: 入力中にパネル全体を再描画すると、1文字ごとにフォーカスが外れるため、
+      // パネルは描き直さず、集計と記録一覧だけ更新する。
+      renderSummary();
+      renderMonthFilter();
+      renderLogs();
+    }
+
+    function startPanel(id) {
+      const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
+      const now = nowIso();
+      const linkedToLog = !panel.itemId;
+      const logId = linkedToLog ? panel.id : crypto.randomUUID();
+      const log = {
+        id: logId,
+        panelId: linkedToLog ? panel.id : null,
+        itemId: panel.itemId || null,
+        customName: panel.customName || "",
+        itemName: buildItemName(panel),
+        start: now,
+        end: now,
+        date: dateKey(new Date(now)),
+        durationMs: 0,
+        completed: false
+      };
+      state.logs.push(log);
+
+      panel.start = now;
+      panel.end = now;
+      panel.running = true;
+      panel.completed = false;
+      panel.collapsed = false;
+      panel.date = dateKey(new Date(panel.start));
+      panel.activeLogId = log.id;
+      panel.lastLogId = log.id;
+      panel.linkedToLog = linkedToLog;
+
+      const hasEmpty = state.panels.some(p=>p.id!==panel.id && !p.start && !p.itemId && !p.customName);
+      if (!hasEmpty) state.panels.push(newPanel());
+      saveState(); renderAll();
+    }
+
+    function stopPanel(id) {
+      const panel = state.panels.find(p=>p.id===id); if (!panel || !panel.running) return;
+      panel.end = nowIso();
+      panel.running = false;
+
+      const log = panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
+      if (log) {
+        log.end = panel.end;
+        log.itemId = panel.itemId || null;
+        log.customName = panel.customName || "";
+        log.itemName = buildItemName(panel);
+        log.completed = !panel.itemId;
+        recalcLog(log);
+        panel.lastLogId = log.id;
+      }
+      panel.activeLogId = null;
+
+      if (panel.itemId) {
+        // v38: 定番項目カードは終了後も作業側に残し、再開始できる。
+        panel.completed = false;
+        panel.collapsed = false;
+      } else {
+        // v38: 手入力のみ・未分類カードは終了時に完了へ移動し、記録と連動する。
+        panel.completed = true;
+        panel.collapsed = true;
+        panel.linkedToLog = true;
+      }
+      saveState(); renderAll();
+    }
+
+    function completePanel(id) {
+      const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
+      panel.completed = true;
+      panel.collapsed = true;
+      panel.activeLogId = null;
+      saveState(); renderAll();
+    }
+
+    function updatePanelTime(panelId, field, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || !panel.start) return;
+      const base = field === "start" ? panel.start : (panel.end || panel.start);
+      const iso = localTimeToIso(value, base); if (!iso) return;
+      if (field === "start") {
+        panel.start = iso;
+        panel.date = dateKey(new Date(iso));
+        if (!panel.end || new Date(panel.end) < new Date(panel.start)) panel.end = panel.start;
+      } else {
+        panel.end = iso;
+      }
+      const log = panel.activeLogId ? logById(panel.activeLogId) : (panel.linkedToLog ? logById(panel.id) : logById(panel.lastLogId));
+      if (log) {
+        log.start = panel.start;
+        log.end = panel.end || panel.start;
+        log.date = dateKey(new Date(log.start));
+        recalcLog(log);
+      }
+      ensureLogLinks(); saveState(); renderAll();
+    }
+
+    function createItem(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; state.items.push(item); return item; }
+    function addItemFromDialog() { const name=$("newItemName").value.trim(); const kana=$("newItemKana").value.trim(); if(!name||!kana){ alert("項目名とふりがなを両方入力してください。"); return; } createItem(name,kana); $("newItemName").value=""; $("newItemKana").value=""; saveState(); renderAll(); }
+    function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); ensureLogLinks(); saveState(); renderAll(); }
+    function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」をプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); ensureLogLinks(); saveState(); renderAll(); }
+
+    function exportCsvFile(logs, filename) {
+      const rows = [["日付","項目","開始時間","終了時間","分"]];
+      logs.sort((a,b)=>new Date(a.start)-new Date(b.start)).forEach(l=>rows.push([l.date,l.itemName,timeText(l.start),timeText(l.end),Math.round(l.durationMs/60000)]));
+      const csv = rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+      const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+    }
+    function escapeExcelCell(value) { return String(value??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+    function exportExcelFile(logs, filename) {
+      const rows = logs.sort((a,b)=>new Date(a.start)-new Date(b.start)).map(l=>`<tr><td>${escapeExcelCell(l.date)}</td><td>${escapeExcelCell(l.itemName)}</td><td>${escapeExcelCell(timeText(l.start))}</td><td>${escapeExcelCell(timeText(l.end))}</td><td style="mso-number-format:'0';">${Math.round(l.durationMs/60000)}</td></tr>`).join("");
+      const html = `<html><head><meta charset="utf-8"></head><body><table border="1"><thead><tr><th>日付</th><th>項目</th><th>開始時間</th><th>終了時間</th><th>分</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+      const blob = new Blob(["\uFEFF"+html], {type:"application/vnd.ms-excel;charset=utf-8"});
+      const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+    }
+    function exportMonthCsv() { const target=$("monthFilter")?.value||monthKey(); const fmt=$("exportFormat")?.value||"csv"; const logs=currentLogsForCalc().filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target); fmt==="excel" ? exportExcelFile(logs,`作業タイマー記録_${target}.xls`) : exportCsvFile(logs,`作業タイマー記録_${target}.csv`); }
+    function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); state.panels=state.panels.filter(p=>!removeIds.has(p.id)); if(!state.panels.length) state.panels.push(newPanel()); saveState(); renderAll(); }
+
+    $("addPanelBtn").addEventListener("click", () => addPanel(true));
+    $("openItemDialogBtn").addEventListener("click", () => { renderItemManageList(); $("itemDialog").showModal(); });
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
     $("newItemKana").addEventListener("keydown", e => { if(e.key==="Enter") addItemFromDialog(); });
