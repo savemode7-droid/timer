@@ -1,4 +1,4 @@
-// Timer App app.js v37.1
+// Timer App app.js v37.2
 
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
@@ -20,7 +20,7 @@
 
     function newPanel() {
       const id = crypto.randomUUID();
-      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, date:dateKey() };
+      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:false, date:dateKey() };
     }
 
     function loadState() {
@@ -66,6 +66,7 @@
             end,
             running: !!(p.running || p.runningSince),
             completed: !!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed),
+            collapsed: (p.collapsed !== undefined) ? !!p.collapsed : (!!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed)),
             date: p.date || (start ? dateKey(new Date(start)) : dateKey())
           };
         });
@@ -150,6 +151,7 @@
           if (panel.running) panel.end = endOfOldDay;
           panel.running = false;
           panel.completed = true;
+          panel.collapsed = true;
           panel.date = panel.date || oldDate;
         }
       });
@@ -182,8 +184,9 @@
       list.innerHTML = sortedPanelsForDisplay().map((panel) => {
         const running = !!panel.running;
         const completed = !!panel.completed;
+        const collapsed = completed && panel.collapsed !== false;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
-        const title = completed ? `完了${++completedCount}` : `作業${++workCount}`;
+        const title = completed ? `${collapsed ? "▶" : "▼"} ${escapeHtml(buildItemName(panel))}` : `作業${++workCount}`;
         const actionControls = completed ? `` : `
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
@@ -203,12 +206,13 @@
           `;
 
         return `
-          <div class="timer-panel ${completed ? "completed" : ""}">
-            <div class="panel-head">
+          <div class="timer-panel ${completed ? "completed" : ""} ${collapsed ? "collapsed" : ""}">
+            <div class="panel-head" ${completed ? `data-toggle-completed="${panel.id}" title="タップで開閉"` : ""}>
               <div><div class="panel-title">${title}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
             </div>
 
+            ${collapsed ? "" : `
             <div class="item-input-row">
               <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
               <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
@@ -216,6 +220,7 @@
 
             ${actionControls}
             ${timeLine}
+            `}
           </div>
         `;
       }).join("");
@@ -335,6 +340,14 @@
       alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
     }
 
+    function toggleCompletedPanel(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel || !panel.completed) return;
+      panel.collapsed = !panel.collapsed;
+      saveState();
+      renderAll();
+    }
+
     function updateLogFromPanel(panel) { ensureLogLinks(); }
 
     function changePanelItem(panelId, itemId) {
@@ -363,6 +376,7 @@
       panel.end = now;
       panel.running = true;
       panel.completed = false;
+      panel.collapsed = false;
       panel.date = dateKey(new Date(panel.start));
       ensureLogLinks();
       const hasEmpty = state.panels.some(p=>p.id!==panel.id && !p.start && !p.itemId && !p.customName);
@@ -375,6 +389,7 @@
       panel.end = nowIso();
       panel.running = false;
       panel.completed = true;
+      panel.collapsed = true;
       ensureLogLinks();
       saveState(); renderAll();
     }
@@ -435,6 +450,18 @@
     document.body.addEventListener("input", e => { const el=e.target; if(el.dataset.customName) changeCustomName(el.dataset.customName, el.value); });
     document.body.addEventListener("click", e => {
       const el=e.target;
+      if (el.closest("button")) {
+        if(el.dataset.start) startPanel(el.dataset.start);
+        if(el.dataset.stop) stopPanel(el.dataset.stop);
+        if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
+        if(el.dataset.deleteLog) deleteLog(el.dataset.deleteLog);
+        if(el.dataset.logLocked) showLockedLogMessage();
+        if(el.dataset.editItem) editItem(el.dataset.editItem);
+        if(el.dataset.deleteItem) deleteItem(el.dataset.deleteItem);
+        return;
+      }
+      const toggleHead = el.closest("[data-toggle-completed]");
+      if (toggleHead) toggleCompletedPanel(toggleHead.dataset.toggleCompleted);
       if(el.dataset.start) startPanel(el.dataset.start);
       if(el.dataset.stop) stopPanel(el.dataset.stop);
       if(el.dataset.deletePanel) deletePanel(el.dataset.deletePanel);
