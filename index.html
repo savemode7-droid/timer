@@ -1,14 +1,14 @@
 <!--
 ==================================================
 作業タイマー
-Version : v32-20260704-1620
-Base    : v31
-Date    : 2026-07-04 16:20
+Version : v33-20260704-1635
+Base    : v32
+Date    : 2026-07-04 16:35
 
 Changes
-- 合計パネルを「今日の合計」「今月の合計」の2行表示に変更
-- 今週の合計表示を削除
-- v31の記録日最上部配置、パネル＝ログ1件、完了パネル1行表示を維持
+- 合計パネルを「今日・今週・今月」の1行表示に変更
+- 記録・合計・出力の見出しを作業パネルと同じ青い帯に変更
+- v32の記録日最上部配置、パネル＝ログ1件、完了パネル1行表示を維持
 ==================================================
 -->
 <!doctype html>
@@ -881,13 +881,48 @@ Changes
   background: #fff;
 }
 
+
+/* v33: blue section headers and one-line period summary */
+.section-card-blue {
+  padding-top: 7px;
+}
+.section-card-blue .section-title {
+  background: #1e40af;
+  color: #fff;
+  margin: -7px -7px 7px;
+  padding: 4px 8px;
+  border-radius: 9px 9px 0 0;
+  min-height: 24px;
+  font-size: 13px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+}
+.period-summary.one-line {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
+  font-size: 12px;
+  font-weight: 900;
+  color: #1e40af;
+  padding: 7px 2px;
+  font-variant-numeric: tabular-nums;
+}
+.period-summary.one-line span {
+  display: inline-block;
+}
+
 </style>
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v32-20260704-1620</span>
+      <span class="app-version">v33-20260704-1635</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -909,17 +944,17 @@ Changes
       </div>
     </section>
 
-    <section class="card">
+    <section class="card section-card-blue">
       <h2 class="section-title">記録</h2>
       <div id="logs"></div>
     </section>
 
-    <section class="card">
+    <section class="card section-card-blue">
       <h2 class="section-title">合計</h2>
       <div id="summary"></div>
     </section>
 
-    <section class="card">
+    <section class="card section-card-blue">
       <h2 class="section-title">出力</h2>
       <div class="export-panel">
         <div class="export-select-row">
@@ -1199,19 +1234,30 @@ Changes
     function renderSummary() {
       const today = dateKey();
       const targetMonth = monthKey();
+      const baseDate = new Date(`${today}T00:00:00`);
+      const weekStart = startOfWeekMonday(baseDate);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
 
       const logs = currentLogsForCalc();
       const todayTotal = logs
         .filter(l => l.date === today)
+        .reduce((sum, l) => sum + l.durationMs, 0);
+      const weekTotal = logs
+        .filter(l => {
+          const d = new Date(`${l.date}T00:00:00`);
+          return d >= weekStart && d <= weekEnd;
+        })
         .reduce((sum, l) => sum + l.durationMs, 0);
       const monthTotal = logs
         .filter(l => (l.date || "").slice(0, 7) === targetMonth)
         .reduce((sum, l) => sum + l.durationMs, 0);
 
       $("summary").innerHTML = `
-        <div class="period-summary two-line">
-          <div class="summary-row"><span class="summary-label">今日の合計</span><span class="summary-value">${durationJa(todayTotal)}</span></div>
-          <div class="summary-row"><span class="summary-label">今月の合計</span><span class="summary-value">${durationJa(monthTotal)}</span></div>
+        <div class="period-summary one-line">
+          <span>今日 ${durationJa(todayTotal)}</span>
+          <span>今週 ${durationJa(weekTotal)}</span>
+          <span>今月 ${durationJa(monthTotal)}</span>
         </div>`;
     }
 
