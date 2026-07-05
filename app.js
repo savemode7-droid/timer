@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step1.2.2
+// Timer App app.js v39.5 Step1.2.1.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -657,6 +657,7 @@ function renderItemManageList() {
     $("openItem1DialogBtn").addEventListener("click", () => openItemDialog("item1"));
     $("openItem2DialogBtn").addEventListener("click", () => openItemDialog("item2"));
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
+    $("closeDialogBtnItem1").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
     $("addItem2Btn").addEventListener("click", addItem2FromDialog);
     $("newItemKana").addEventListener("keydown", e => { if(e.key==="Enter") addItemFromDialog(); });
