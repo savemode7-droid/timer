@@ -1,4 +1,4 @@
-// Timer App app.js v39.3.2
+// Timer App app.js v39.4
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -224,7 +224,7 @@
               <span class="work-time-label">終了</span>
               <input type="time" step="1" data-end-time="${panel.id}" value="${timeOnlyValue(panel.end)}" ${!panel.start ? "disabled" : ""} />
               <span class="work-time-label">作業</span>
-              <span class="work-duration">${durationJa(elapsed)}</span>
+              <span class="work-duration">${durationText(elapsed)}</span>
             </div>
           `;
 
