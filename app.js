@@ -1,4 +1,4 @@
-// Timer App app.js v39.0 Step4
+// Timer App app.js v39.0 Step4.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -37,6 +37,7 @@
       const logs = Array.isArray(s.logs) ? s.logs.map(l => {
         const start = l.start || nowIso();
         const end = l.end || start;
+        const durationMs = Math.max(0, new Date(end).getTime() - new Date(start).getTime());
         return {
           id: l.id || crypto.randomUUID(),
           panelId: null,
@@ -45,10 +46,10 @@
           itemName: l.itemName || "未分類",
           start, end,
           date: l.date || dateKey(new Date(start)),
-          durationMs: Math.max(0, new Date(end).getTime() - new Date(start).getTime()),
+          durationMs,
           completed: !!l.completed
         };
-      }) : [];
+      }).filter(l => l.durationMs > 0) : [];
 
       let panels = [];
       if (Array.isArray(s.panels) && s.panels.length) {
@@ -388,7 +389,7 @@ function renderItemManageList() {
     }
 
     function updateLogFromPanel(panel) {
-      // v39.0 Step4:
+      // v39.0 Step4.1:
       // 開始時には記録を作成しない。
       // 終了時に createLogFromPanel() で初めて記録へ追加する。
     }
@@ -416,7 +417,7 @@ function renderItemManageList() {
       const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
       const now = nowIso();
 
-      // v39.0 Step4: 開始時には記録を作成しない。
+      // v39.0 Step4.1: 開始時には記録を作成しない。
       // 記録一覧には、終了ボタンを押した時点で追加する。
       panel.start = now;
       panel.end = null;
@@ -437,7 +438,7 @@ function renderItemManageList() {
       panel.end = nowIso();
       panel.running = false;
 
-      // v39.0 Step4: 終了時に初めて記録を作成して表示する。
+      // v39.0 Step4.1: 終了時に初めて記録を作成して表示する。
       const log = createLogFromPanel(panel, panel.end);
       panel.activeLogId = null;
       panel.lastLogId = log ? log.id : null;
@@ -447,7 +448,7 @@ function renderItemManageList() {
         panel.completed = false;
         panel.collapsed = false;
       } else {
-        // v39.0 Step4: 手入力のみ・未分類カードは終了時に完了へ移動するが、記録とは連動しない。
+        // v39.0 Step4.1: 手入力のみ・未分類カードは終了時に完了へ移動するが、記録とは連動しない。
         panel.completed = true;
         panel.collapsed = true;
       }
