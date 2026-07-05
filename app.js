@@ -1,4 +1,4 @@
-// Timer App app.js v39.1.1
+// Timer App app.js v39.1.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -98,6 +98,17 @@
       const free = (panel.customName || "").trim();
       // v37.1: ドロップダウン選択と手入力が両方ある場合は、スペースなしで結合する。
       // 例: ゲーム + 33 => ゲーム33
+      if (base && free) return `${base}${free}`;
+      if (base) return base;
+      if (free) return free;
+      return "未分類";
+    }
+
+    function buildLogItemName(itemId, customName, items = state.items) {
+      const item = items.find(i => i.id === itemId);
+      const base = item ? item.name : "";
+      const free = (customName || "").trim();
+      // v39.1.2: 記録編集は「項目選択＋手入力」。表示文字列はスペースなしで結合する。
       if (base && free) return `${base}${free}`;
       if (base) return base;
       if (free) return free;
@@ -373,15 +384,26 @@ function renderItemManageList() {
       if (!log) return;
 
       const dialog = $("logEditDialog");
-      const itemSelect = $("editLogItemName");
+      const itemSelect = $("editLogItemId");
+      const customInput = $("editLogCustomName");
       const startInput = $("editLogStart");
       const endInput = $("editLogEnd");
       const saveBtn = $("saveLogEditBtn");
 
-      const currentName = log.itemName || "未分類";
-      const names = [...new Set([currentName, ...sortedItems().map(i => i.name), "未分類"].filter(Boolean))];
-      itemSelect.innerHTML = names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
-      itemSelect.value = currentName;
+      const items = sortedItems();
+      itemSelect.innerHTML = `<option value="">未選択</option>` +
+        items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+
+      const currentItem = log.itemId ? itemById(log.itemId) : null;
+      if (currentItem) {
+        itemSelect.value = currentItem.id;
+        customInput.value = log.customName || "";
+      } else {
+        itemSelect.value = "";
+        const name = (log.itemName || "").trim();
+        customInput.value = (name && name !== "未分類") ? (log.customName || name) : (log.customName || "");
+      }
+
       startInput.value = dateTimeLocalValue(log.start);
       endInput.value = dateTimeLocalValue(log.end || log.start);
       saveBtn.dataset.editingLogId = log.id;
@@ -393,12 +415,14 @@ function renderItemManageList() {
       const log = state.logs.find(l => l.id === id);
       if (!log) return;
 
-      const itemName = $("editLogItemName").value.trim();
+      const itemId = $("editLogItemId").value || null;
+      const customName = $("editLogCustomName").value.trim();
+      const itemName = buildLogItemName(itemId, customName);
       const startIso = dateTimeLocalToIso($("editLogStart").value);
       const endIso = dateTimeLocalToIso($("editLogEnd").value);
 
-      if (!itemName) {
-        alert("項目を選択してください。");
+      if (!itemId && !customName) {
+        alert("項目を選択するか、手入力を入力してください。");
         return;
       }
       if (!startIso || !endIso) {
@@ -410,9 +434,9 @@ function renderItemManageList() {
         return;
       }
 
+      log.itemId = itemId;
+      log.customName = customName;
       log.itemName = itemName;
-      log.customName = itemName;
-      log.itemId = null;
       log.start = startIso;
       log.end = endIso;
       recalcLog(log);
