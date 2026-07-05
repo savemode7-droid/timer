@@ -1,4 +1,4 @@
-// Timer App app.js v39.1.2
+// Timer App app.js v39.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -184,8 +184,16 @@
         return tb - ta;
       });
     }
+    function removeCompletedPanels() {
+      // v39.2: 完了パネル一覧は廃止。
+      // 旧バージョンで完了グループに入っていたパネルは、記録を残したままパネルだけ取り除く。
+      state.panels = state.panels.filter(panel => !panel.completed || panel.running);
+      if (!state.panels.length) state.panels.push(newPanel());
+    }
+
     function renderPanels() {
       const list = $("panelList");
+      removeCompletedPanels();
       if (!state.panels.length) state.panels.push(newPanel());
       if (!state.panelGroups) state.panelGroups = { workCollapsed:false, templateCollapsed:false, completedCollapsed:true };
 
@@ -194,13 +202,13 @@
       const allPanels = sortedPanelsForDisplay();
       const workPanels = allPanels.filter(p => !p.completed && !p.itemId);
       const templatePanels = allPanels.filter(p => !p.completed && !!p.itemId);
-      const completedPanels = allPanels.filter(p => !!p.completed);
+      // v39.2: 完了パネル一覧は廃止したため、完了パネルは表示しない。
 
       function panelHtml(panel, title, extraClass = "") {
         const running = !!panel.running;
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
-        const canComplete = !!panel.itemId && !!panel.end && !running && !completed;
+        const canComplete = !!panel.end && !running && !completed;
         const actionControls = completed ? `` : `
             <div class="main-actions">
               <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
@@ -267,8 +275,7 @@
 
       list.innerHTML =
         groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p) => buildItemName(p).replace(/\s+/g,"") || "未分類") +
-        groupHtml("template", "定型作業", templatePanels, state.panelGroups.templateCollapsed, (p) => buildItemName(p), "template-panel") +
-        groupHtml("completed", "完了", completedPanels, state.panelGroups.completedCollapsed, (p) => buildItemName(p));
+        groupHtml("template", "定型作業", templatePanels, state.panelGroups.templateCollapsed, (p) => buildItemName(p), "template-panel");
     }
 
 function renderItemManageList() {
@@ -348,7 +355,7 @@ function renderItemManageList() {
             const action = `
               <button class="log-icon-btn edit-log" data-edit-log="${l.id}" title="この記録を編集">✎</button>
               <button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
-            return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
+            return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationText(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
           }).join("") +
           `</tbody></table>`
         : `<div class="empty">この日の記録はありません。</div>`;
@@ -537,38 +544,20 @@ function renderItemManageList() {
       panel.activeLogId = null;
       panel.lastLogId = log ? log.id : null;
 
-      if (panel.itemId) {
-        // v38: 定番項目カードは終了後も作業側に残し、再開始できる。
-        panel.completed = false;
-        panel.collapsed = false;
-      } else {
-        // v39.0 Step4.1: 手入力のみ・未分類カードは終了時に完了へ移動するが、記録とは連動しない。
-        panel.completed = true;
-        panel.collapsed = true;
-      }
+      // v39.2: 完了パネル一覧は廃止。
+      // 終了後もパネルは作業側に残し、「完了」ボタンでパネルだけ削除する。
+      panel.completed = false;
+      panel.collapsed = false;
       saveState(); renderAll();
     }
 
     function completePanel(id) {
       const panel = state.panels.find(p=>p.id===id);
       if (!panel || panel.running) return;
-
-      if (panel.itemId) {
-        // 定型作業：記録は終了時点で作成済み。完了では新規記録を作らず、手入力だけクリアして次回利用に戻す。
-        panel.customName = "";
-        panel.start = null;
-        panel.end = null;
-        panel.activeLogId = null;
-        panel.lastLogId = null;
-        panel.running = false;
-        panel.completed = false;
-        panel.collapsed = false;
-      } else {
-        // 通常作業：完了グループへ移動した状態を維持する。
-        panel.completed = true;
-        panel.collapsed = true;
-        panel.activeLogId = null;
-      }
+      // v39.2: 完了パネル一覧は廃止。
+      // 完了ボタンは、作成済みの記録を残したまま作業パネルだけ削除する。
+      state.panels = state.panels.filter(p => p.id !== id);
+      if (!state.panels.length) state.panels.push(newPanel());
       saveState(); renderAll();
     }
 
