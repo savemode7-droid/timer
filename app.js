@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step2.1.3
+// Timer App app.js v39.5 Step2.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -20,7 +20,7 @@
 
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
-      return { id, itemId:null, customName:"", title:"", editingTitle:false, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
+      return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
     }
 
     function loadState() {
@@ -44,6 +44,7 @@
           id: l.id || crypto.randomUUID(),
           panelId: null,
           itemId: l.itemId || null,
+          item2Id: l.item2Id || null,
           customName: l.customName || "",
           itemName: l.itemName || "未分類",
           start, end,
@@ -62,6 +63,7 @@
           return {
             id,
             itemId: p.itemId || null,
+            item2Id: p.item2Id || null,
             customName: p.customName || "",
             title: p.title || "",
             editingTitle: !!p.editingTitle,
@@ -98,16 +100,15 @@
     function item2ById(id) { return (state.item2s || []).find(i=>i.id===id); }
     function logById(id) { return state.logs.find(l=>l.id===id); }
 
-    function buildItemName(panel, items = state.items) {
-      const item = items.find(i=>i.id===panel.itemId);
-      const base = item ? item.name : "";
+    function buildItemName(panel, items = state.items, item2s = state.item2s || []) {
+      const item1 = items.find(i=>i.id===panel.itemId);
+      const item2 = item2s.find(i=>i.id===panel.item2Id);
+      const part1 = item1 ? item1.name : "";
+      const part2 = item2 ? item2.name : "";
       const free = (panel.customName || "").trim();
-      // v37.1: ドロップダウン選択と手入力が両方ある場合は、スペースなしで結合する。
-      // 例: ゲーム + 33 => ゲーム33
-      if (base && free) return `${base}${free}`;
-      if (base) return base;
-      if (free) return free;
-      return "未分類";
+      // v39.5 Step2.2: 正式な記録名は「項目1＋項目2＋手入力」をスペースなしで結合する。
+      const name = `${part1}${part2}${free}`;
+      return name || "未分類";
     }
 
 
@@ -117,15 +118,15 @@
       return title || "作業";
     }
 
-    function buildLogItemName(itemId, customName, items = state.items) {
-      const item = items.find(i => i.id === itemId);
-      const base = item ? item.name : "";
+    function buildLogItemName(itemId, customName, item2Id = null, items = state.items, item2s = state.item2s || []) {
+      const item1 = items.find(i => i.id === itemId);
+      const item2 = item2s.find(i => i.id === item2Id);
+      const part1 = item1 ? item1.name : "";
+      const part2 = item2 ? item2.name : "";
       const free = (customName || "").trim();
-      // v39.1.2: 記録編集は「項目選択＋手入力」。表示文字列はスペースなしで結合する。
-      if (base && free) return `${base}${free}`;
-      if (base) return base;
-      if (free) return free;
-      return "未分類";
+      // v39.5 Step2.2: 記録名は「項目1＋項目2＋手入力」。記録編集の項目2編集は次Stepで追加予定。
+      const name = `${part1}${part2}${free}`;
+      return name || "未分類";
     }
 
     function recalcLog(log) {
@@ -210,7 +211,8 @@
       if (!state.panels.length) state.panels.push(newPanel(true));
       if (!state.panelGroups) state.panelGroups = { workCollapsed:false, templateCollapsed:false, completedCollapsed:true };
 
-      const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
+      const itemOptions = (selectedId) => `<option value="">項目1を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
+      const item2Options = (selectedId) => `<option value="">項目2を選択</option>` + sortedItem2s().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
 
       const allPanels = sortedPanelsForDisplay();
       const workPanels = allPanels.filter(p => !p.completed);
@@ -251,8 +253,9 @@
           `;
         const panelBody = panelCollapsed ? "" : `
             <div class="panel-body">
-              <div class="item-input-row">
+              <div class="item-input-row panel-formal-inputs">
                 <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
+                <select data-select2-panel="${panel.id}">${item2Options(panel.item2Id)}</select>
                 <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
               </div>
 
@@ -472,7 +475,7 @@ function renderItemManageList() {
 
       const itemId = $("editLogItemId").value || null;
       const customName = $("editLogCustomName").value.trim();
-      const itemName = buildLogItemName(itemId, customName);
+      const itemName = buildLogItemName(itemId, customName, log.item2Id || null);
       const startIso = dateTimeLocalToIso($("editLogStart").value);
       const endIso = dateTimeLocalToIso($("editLogEnd").value);
 
@@ -490,6 +493,8 @@ function renderItemManageList() {
       }
 
       log.itemId = itemId;
+      // 項目2編集UIは v39.5 Step3 で追加予定。ここでは既存値を保持する。
+      log.item2Id = log.item2Id || null;
       log.customName = customName;
       log.itemName = itemName;
       log.start = startIso;
@@ -575,6 +580,13 @@ function renderItemManageList() {
     function changePanelItem(panelId, itemId) {
       const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
       panel.itemId = itemId || null;
+      updateLogFromPanel(panel);
+      saveState(); renderAll();
+    }
+
+    function changePanelItem2(panelId, item2Id) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.item2Id = item2Id || null;
       updateLogFromPanel(panel);
       saveState(); renderAll();
     }
@@ -672,7 +684,7 @@ function renderItemManageList() {
     function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目1名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); saveState(); renderAll(); }
     function editItem2(id) { const item=item2ById(id); if(!item) return; const name=prompt("項目2名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); saveState(); renderAll(); }
     function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目1は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」を項目1のプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); saveState(); renderAll(); }
-    function deleteItem2(id) { const item=item2ById(id); if(!item) return; if(!confirm(`「${item.name}」を項目2のプルダウンから削除しますか？`)) return; state.item2s=(state.item2s||[]).filter(i=>i.id!==id); saveState(); renderAll(); }
+    function deleteItem2(id) { const item=item2ById(id); if(!item) return; if(!confirm(`「${item.name}」を項目2のプルダウンから削除しますか？`)) return; state.item2s=(state.item2s||[]).filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.item2Id===id) p.item2Id=null; }); saveState(); renderAll(); }
 
     function exportCsvFile(logs, filename) {
       const rows = [["日付","項目","開始時間","終了時間","分"]];
@@ -717,6 +729,7 @@ function renderItemManageList() {
     document.body.addEventListener("change", e => {
       const el=e.target;
       if(el.dataset.selectPanel) changePanelItem(el.dataset.selectPanel, el.value);
+      if(el.dataset.select2Panel) changePanelItem2(el.dataset.select2Panel, el.value);
       if(el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
       if(el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
     });

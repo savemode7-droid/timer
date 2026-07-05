@@ -1331,3 +1331,13 @@ button.complete-btn:disabled {
   border-radius: 8px;
   background: #ffffff;
 }
+
+/* v39.5 Step2.2: 作業パネル正式入力 項目1＋項目2＋手入力 */
+.item-input-row.panel-formal-inputs {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+}
+@media (max-width: 520px) {
+  .item-input-row.panel-formal-inputs {
+    grid-template-columns: 1fr;
+  }
+}
