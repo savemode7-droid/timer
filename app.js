@@ -1,4 +1,4 @@
-// Timer App app.js v38.7
+// Timer App app.js v38.8
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -261,7 +261,7 @@
       }
 
       list.innerHTML =
-        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p, i) => `作業${i + 1}`) +
+        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p) => buildItemName(p).replace(/\s+/g,"") || "未分類") +
         groupHtml("template", "定型作業", templatePanels, state.panelGroups.templateCollapsed, (p) => buildItemName(p), "template-panel") +
         groupHtml("completed", "完了", completedPanels, state.panelGroups.completedCollapsed, (p) => buildItemName(p));
     }
