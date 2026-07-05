@@ -1,4 +1,4 @@
-// Timer App app.js v39.4
+// Timer App app.js v39.4.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -200,8 +200,8 @@
       const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
 
       const allPanels = sortedPanelsForDisplay();
-      const workPanels = allPanels.filter(p => !p.completed && !p.itemId);
-      const templatePanels = allPanels.filter(p => !p.completed && !!p.itemId);
+      const workPanels = allPanels.filter(p => !p.completed);
+      // v39.4.1: 定型作業一覧は廃止。項目を選択してもパネルは移動しない。
       // v39.2: 完了パネル一覧は廃止したため、完了パネルは表示しない。
 
       function panelHtml(panel, title, extraClass = "") {
@@ -274,8 +274,7 @@
       }
 
       list.innerHTML =
-        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p) => buildItemName(p).replace(/\s+/g,"") || "未分類") +
-        groupHtml("template", "定型作業", templatePanels, state.panelGroups.templateCollapsed, (p) => buildItemName(p), "template-panel");
+        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p) => buildItemName(p).replace(/\s+/g,"") || "未分類");
     }
 
 function renderItemManageList() {
@@ -478,8 +477,6 @@ function renderItemManageList() {
     function togglePanelGroup(kind) {
       if (!state.panelGroups) state.panelGroups = { workCollapsed: false, templateCollapsed: false, completedCollapsed: true };
       if (kind === "work") state.panelGroups.workCollapsed = !state.panelGroups.workCollapsed;
-      if (kind === "template") state.panelGroups.templateCollapsed = !state.panelGroups.templateCollapsed;
-      if (kind === "completed") state.panelGroups.completedCollapsed = !state.panelGroups.completedCollapsed;
       saveState();
       renderAll();
     }
