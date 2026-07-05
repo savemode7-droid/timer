@@ -1,4 +1,4 @@
-// Timer App app.js v38.8
+// Timer App app.js v38.9
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -227,20 +227,32 @@
             </div>
           `;
 
+        const panelCollapsed = !!panel.collapsed;
+        const collapseMark = panelCollapsed ? "▶" : "▼";
+        const panelBody = panelCollapsed ? "" : `
+            <div class="panel-body">
+              <div class="item-input-row">
+                <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
+                <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
+              </div>
+
+              ${actionControls}
+              ${timeLine}
+            </div>
+          `;
+
         return `
-          <div class="timer-panel ${completed ? "completed" : ""} ${extraClass}">
+          <div class="timer-panel ${completed ? "completed" : ""} ${panelCollapsed ? "collapsed" : ""} ${extraClass}">
             <div class="panel-head">
-              <div><div class="panel-title">${escapeHtml(title)}</div><div class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</div></div>
-              <button class="danger panel-delete-btn" data-delete-panel="${panel.id}">削除</button>
+              <button class="panel-toggle-btn" data-toggle-panel="${panel.id}" type="button">
+                <span class="panel-toggle-mark">${collapseMark}</span>
+                <span class="panel-title">${escapeHtml(title)}</span>
+                <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
+              </button>
+              <button class="danger panel-delete-btn" data-delete-panel="${panel.id}" type="button">削除</button>
             </div>
 
-            <div class="item-input-row">
-              <select data-select-panel="${panel.id}">${itemOptions(panel.itemId)}</select>
-              <input class="item-free-name" data-custom-name="${panel.id}" value="${escapeHtml(panel.customName || "")}" placeholder="手入力" />
-            </div>
-
-            ${actionControls}
-            ${timeLine}
+            ${panelBody}
           </div>
         `;
       }
@@ -388,6 +400,15 @@ function renderItemManageList() {
 
     function showLockedLogMessage() {
       alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
+    }
+
+
+    function togglePanel(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel) return;
+      panel.collapsed = !panel.collapsed;
+      saveState();
+      renderAll();
     }
 
     function togglePanelGroup(kind) {
@@ -620,6 +641,12 @@ function renderItemManageList() {
     document.body.addEventListener("click", e => {
       const button = e.target.closest("button");
       if (!button) return;
+
+      const togglePanelButton = button.closest("[data-toggle-panel]");
+      if (togglePanelButton) {
+        togglePanel(togglePanelButton.dataset.togglePanel);
+        return;
+      }
 
       const toggleGroup = button.closest("[data-toggle-panel-group]");
       if (toggleGroup) {
