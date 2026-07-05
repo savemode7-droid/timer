@@ -1190,7 +1190,7 @@ button.complete-btn:disabled {
 }
 
 
-/* v39.5 Step2.1.1: panel title text opens title editor */
+/* v39.5 Step2.1.2: inline panel title editing */
 .panel-title-clickable {
   cursor: text;
   text-decoration: underline;
@@ -1317,4 +1317,17 @@ button.complete-btn:disabled {
 }
 .panel-title-clickable:active {
   opacity: .75;
+}
+
+
+/* v39.5 Step2.1.2: inline title input */
+.panel-title-inline-input {
+  min-width: 120px;
+  max-width: min(60vw, 420px);
+  font-weight: 900;
+  font-size: 18px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
 }

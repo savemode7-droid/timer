@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step2.1
+// Timer App app.js v39.5 Step2.1.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -244,15 +244,11 @@
         const panelCollapsed = !!panel.collapsed;
         const collapseMark = panelCollapsed ? "▶" : "▼";
         const displayTitle = panelDisplayTitle(panel);
-        const titleEditor = panel.editingTitle ? `
-            <div class="panel-title-editor">
-              <label class="field-label">見出し</label>
-              <input type="text" data-panel-title-input="${panel.id}" value="${escapeHtml(panel.title || "")}" placeholder="作業" />
-              <div class="title-editor-actions">
-                <button class="green" data-save-panel-title="${panel.id}" type="button">保存</button>
-              </div>
-            </div>
-          ` : "";
+        const titleNode = panel.editingTitle ? `
+              <input class="panel-title-inline-input" type="text" data-panel-title-input="${panel.id}" value="${escapeHtml(panel.title || "")}" placeholder="作業" />
+          ` : `
+              <span class="panel-title panel-title-clickable" data-edit-panel-title="${panel.id}" title="見出しを編集">${escapeHtml(displayTitle)}</span>
+          `;
         const panelBody = panelCollapsed ? "" : `
             <div class="panel-body">
               <div class="item-input-row">
@@ -269,12 +265,11 @@
           <div class="timer-panel ${completed ? "completed" : ""} ${panelCollapsed ? "collapsed" : ""} ${extraClass}" data-panel-id="${panel.id}">
             <div class="panel-head panel-head-clickable" data-panel-head-toggle="${panel.id}">
               <span class="panel-toggle-mark">${collapseMark}</span>
-              <span class="panel-title panel-title-clickable" data-edit-panel-title="${panel.id}" title="見出しを編集">${escapeHtml(displayTitle)}</span>
+              ${titleNode}
               <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}" type="button">削除</button>
             </div>
 
-            ${titleEditor}
             ${panelBody}
           </div>
         `;
@@ -528,6 +523,14 @@ function renderItemManageList() {
       renderAll();
     }
 
+    function cancelPanelTitleEdit(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel) return;
+      panel.editingTitle = false;
+      saveState();
+      renderAll();
+    }
+
     function togglePanel(id) {
       const panel = state.panels.find(p => p.id === id);
       if (!panel) return;
@@ -724,8 +727,23 @@ function renderItemManageList() {
         e.preventDefault();
         savePanelTitle(el.dataset.panelTitleInput);
       }
+      if (el?.dataset?.panelTitleInput && e.key === "Escape") {
+        e.preventDefault();
+        cancelPanelTitleEdit(el.dataset.panelTitleInput);
+      }
+    });
+    document.body.addEventListener("focusout", e => {
+      const el = e.target;
+      if (el?.dataset?.panelTitleInput) {
+        savePanelTitle(el.dataset.panelTitleInput);
+      }
     });
     document.body.addEventListener("click", e => {
+      if (e.target.closest("[data-panel-title-input]")) {
+        e.stopPropagation();
+        return;
+      }
+
       const titleTarget = e.target.closest("[data-edit-panel-title]");
       if (titleTarget) {
         e.stopPropagation();
@@ -741,7 +759,6 @@ function renderItemManageList() {
           return;
         }
 
-        if(button.dataset.savePanelTitle) { savePanelTitle(button.dataset.savePanelTitle); return; }
         if(button.dataset.start) { startPanel(button.dataset.start); return; }
         if(button.dataset.stop) { stopPanel(button.dataset.stop); return; }
         if(button.dataset.completePanel) { completePanel(button.dataset.completePanel); return; }
