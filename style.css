@@ -1157,3 +1157,28 @@ button.complete-btn:disabled {
     padding: 8px 4px !important;
   }
 }
+
+
+/* v38.6: display-only changes */
+.panel-head,
+.panel-group-head,
+.section-card-blue .section-title {
+  background: #475569 !important;
+  color: #fff !important;
+}
+
+.timer-panel.completed .panel-head,
+.panel-group-head.completed,
+.panel-group-head.completed-group-head {
+  background: #94A3B8 !important;
+  color: #fff !important;
+}
+
+.export-main {
+  background: #475569 !important;
+  color: #fff !important;
+}
+
+.date-row {
+  margin-top: 0;
+}
