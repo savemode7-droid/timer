@@ -1249,3 +1249,21 @@ button.complete-btn:disabled {
 #logEditDialog input[type="datetime-local"] {
   font-variant-numeric: tabular-nums;
 }
+
+/* v39.5 Step1: item2 management */
+.item-manage-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 8px;
+  margin-top: 8px;
+}
+.item-manage-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+.item-manage-heading {
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+  margin: 4px 0 6px;
+}

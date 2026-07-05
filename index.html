@@ -1,7 +1,7 @@
 <!--
 ==================================================
 作業タイマー
-Version : v39.4.2-initial-display
+Version : v39.5-step1-item2-management
 Base    : v38.5 step1 actual
 Date    : 2026-07-05
 
@@ -18,13 +18,13 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=39.4.2">
+  <link rel="stylesheet" href="style.css?v=39.5-step1">
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v39.4.2</span>
+      <span class="app-version">v39.5 Step1</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -81,12 +81,25 @@ Changes
   <dialog id="itemDialog">
     <div class="dialog-body">
       <div class="dialog-title">プルダウン項目管理</div>
-      <div class="stack">
-        <input id="newItemName" placeholder="項目名 例：メルマガ運営" />
-        <input id="newItemKana" placeholder="ふりがな 例：めるまがうんえい" />
-        <div class="row">
-          <button id="addItemBtn">項目を追加</button>
-          <button class="ghost" id="closeDialogBtn">閉じる</button>
+      <div class="item-manage-section">
+        <div class="item-manage-heading">項目1を追加</div>
+        <div class="stack">
+          <input id="newItemName" placeholder="項目1 例：メルマガ運営" />
+          <input id="newItemKana" placeholder="ふりがな 例：めるまがうんえい" />
+          <div class="row">
+            <button id="addItemBtn">項目1を追加</button>
+          </div>
+        </div>
+      </div>
+      <div class="item-manage-section">
+        <div class="item-manage-heading">項目2を追加</div>
+        <div class="stack">
+          <input id="newItem2Name" placeholder="項目2 例：原稿、配信、確認" />
+          <input id="newItem2Kana" placeholder="ふりがな 例：げんこう" />
+          <div class="row">
+            <button id="addItem2Btn">項目2を追加</button>
+            <button class="ghost" id="closeDialogBtn">閉じる</button>
+          </div>
         </div>
       </div>
       <div id="itemManageList"></div>
@@ -118,5 +131,5 @@ Changes
     </div>
   </dialog>
 
-  <script src="app.js?v=39.4.2"></script>
+  <script src="app.js?v=39.5-step1"></script>
 </html>

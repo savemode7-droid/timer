@@ -1,4 +1,4 @@
-// Timer App app.js v39.4.2
+// Timer App app.js v39.5 Step1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -28,11 +28,12 @@
         if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-      return { items:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true } };
+      return { items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true } };
     }
 
     function normalizeState(s) {
       const items = Array.isArray(s.items) ? s.items.filter(i=>i&&i.name).map(i=>({ id:i.id||crypto.randomUUID(), name:i.name, kana:i.kana||i.name })) : [];
+      const item2s = Array.isArray(s.item2s) ? s.item2s.filter(i=>i&&i.name).map(i=>({ id:i.id||crypto.randomUUID(), name:i.name, kana:i.kana||i.name })) : [];
 
       const logs = Array.isArray(s.logs) ? s.logs.map(l => {
         const start = l.start || nowIso();
@@ -74,7 +75,7 @@
       }
       if (!panels.length) panels = [newPanel()];
 
-      const normalized = { items, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, ...(s.panelGroups || {}) } };
+      const normalized = { items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, ...(s.panelGroups || {}) } };
       ensureLogLinks(normalized);
       return normalized;
     }
@@ -90,6 +91,8 @@
 
     function sortedItems() { return [...state.items].sort((a,b)=>(a.kana||a.name).localeCompare((b.kana||b.name),"ja")); }
     function itemById(id) { return state.items.find(i=>i.id===id); }
+    function sortedItem2s() { return [...(state.item2s || [])].sort((a,b)=>(a.kana||a.name).localeCompare((b.kana||b.name),"ja")); }
+    function item2ById(id) { return (state.item2s || []).find(i=>i.id===id); }
     function logById(id) { return state.logs.find(l=>l.id===id); }
 
     function buildItemName(panel, items = state.items) {
@@ -279,12 +282,20 @@
 
 function renderItemManageList() {
       const area = $("itemManageList");
-      const items = sortedItems();
-      area.innerHTML = items.length ? items.map(item => `
-        <div class="item-card">
-          <div class="item-line"><span class="item-name">${escapeHtml(item.name)}</span><span class="item-kana">${escapeHtml(item.kana)}</span></div>
-          <div class="item-actions"><button class="ghost mini-btn" data-edit-item="${item.id}">編集</button><button class="danger mini-btn" data-delete-item="${item.id}">削除</button></div>
-        </div>`).join("") : `<div class="empty">項目はまだありません。</div>`;
+      const item1s = sortedItems();
+      const item2s = sortedItem2s();
+      const section = (title, items, editAttr, deleteAttr, emptyText) => `
+        <div class="item-manage-section">
+          <div class="item-manage-heading">${escapeHtml(title)}</div>
+          ${items.length ? items.map(item => `
+            <div class="item-card">
+              <div class="item-line"><span class="item-name">${escapeHtml(item.name)}</span><span class="item-kana">${escapeHtml(item.kana)}</span></div>
+              <div class="item-actions"><button class="ghost mini-btn" ${editAttr}="${item.id}">編集</button><button class="danger mini-btn" ${deleteAttr}="${item.id}">削除</button></div>
+            </div>`).join("") : `<div class="empty">${escapeHtml(emptyText)}</div>`}
+        </div>`;
+      area.innerHTML =
+        section("項目1", item1s, "data-edit-item", "data-delete-item", "項目1はまだありません。") +
+        section("項目2", item2s, "data-edit-item2", "data-delete-item2", "項目2はまだありません。");
     }
 
     function currentLogsForCalc() {
@@ -601,9 +612,13 @@ function renderItemManageList() {
     }
 
     function createItem(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; state.items.push(item); return item; }
-    function addItemFromDialog() { const name=$("newItemName").value.trim(); const kana=$("newItemKana").value.trim(); if(!name||!kana){ alert("項目名とふりがなを両方入力してください。"); return; } createItem(name,kana); $("newItemName").value=""; $("newItemKana").value=""; saveState(); renderAll(); }
-    function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); saveState(); renderAll(); }
-    function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」をプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); saveState(); renderAll(); }
+    function createItem2(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; if(!Array.isArray(state.item2s)) state.item2s=[]; state.item2s.push(item); return item; }
+    function addItemFromDialog() { const name=$("newItemName").value.trim(); const kana=$("newItemKana").value.trim(); if(!name||!kana){ alert("項目1名とふりがなを両方入力してください。"); return; } createItem(name,kana); $("newItemName").value=""; $("newItemKana").value=""; saveState(); renderAll(); }
+    function addItem2FromDialog() { const name=$("newItem2Name").value.trim(); const kana=$("newItem2Kana").value.trim(); if(!name||!kana){ alert("項目2名とふりがなを両方入力してください。"); return; } createItem2(name,kana); $("newItem2Name").value=""; $("newItem2Kana").value=""; saveState(); renderAll(); }
+    function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目1名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); saveState(); renderAll(); }
+    function editItem2(id) { const item=item2ById(id); if(!item) return; const name=prompt("項目2名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); saveState(); renderAll(); }
+    function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目1は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」を項目1のプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); saveState(); renderAll(); }
+    function deleteItem2(id) { const item=item2ById(id); if(!item) return; if(!confirm(`「${item.name}」を項目2のプルダウンから削除しますか？`)) return; state.item2s=(state.item2s||[]).filter(i=>i.id!==id); saveState(); renderAll(); }
 
     function exportCsvFile(logs, filename) {
       const rows = [["日付","項目","開始時間","終了時間","分"]];
@@ -626,7 +641,9 @@ function renderItemManageList() {
     $("openItemDialogBtn").addEventListener("click", () => { renderItemManageList(); $("itemDialog").showModal(); });
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
+    $("addItem2Btn").addEventListener("click", addItem2FromDialog);
     $("newItemKana").addEventListener("keydown", e => { if(e.key==="Enter") addItemFromDialog(); });
+    $("newItem2Kana").addEventListener("keydown", e => { if(e.key==="Enter") addItem2FromDialog(); });
     $("saveLogEditBtn").addEventListener("click", saveLogEdit);
     $("cancelLogEditBtn").addEventListener("click", () => $("logEditDialog").close());
     $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); renderSummary(); });
@@ -666,6 +683,8 @@ function renderItemManageList() {
       if(button.dataset.deleteLog) deleteLog(button.dataset.deleteLog);
       if(button.dataset.editItem) editItem(button.dataset.editItem);
       if(button.dataset.deleteItem) deleteItem(button.dataset.deleteItem);
+      if(button.dataset.editItem2) editItem2(button.dataset.editItem2);
+      if(button.dataset.deleteItem2) deleteItem2(button.dataset.deleteItem2);
     });
 
 
