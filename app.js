@@ -1,4 +1,4 @@
-// Timer App app.js v39.0 Step4.1
+// Timer App app.js v39.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -319,7 +319,9 @@ function renderItemManageList() {
       $("logs").innerHTML = logs.length
         ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th><th class="log-action-cell">操作</th></tr></thead><tbody>` +
           logs.map(l=>{
-            const action = `<button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
+            const action = `
+              <button class="log-icon-btn edit-log" data-edit-log="${l.id}" title="この記録を編集">✎</button>
+              <button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
             return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
           }).join("") +
           `</tbody></table>`
@@ -347,6 +349,48 @@ function renderItemManageList() {
       if (!log) return;
       if (!confirm("この記録を削除しますか？")) return;
       state.logs = state.logs.filter(l => l.id !== log.id);
+      saveState();
+      renderAll();
+    }
+
+    function editLog(id) {
+      const log = state.logs.find(l => l.id === id);
+      if (!log) return;
+
+      const itemName = prompt("項目", log.itemName || "未分類");
+      if (itemName === null) return;
+      const trimmedName = itemName.trim();
+      if (!trimmedName) {
+        alert("項目は空にできません。");
+        return;
+      }
+
+      const startValue = prompt("開始時間（hh:mm:ss）", timeText(log.start));
+      if (startValue === null) return;
+      const startIso = localTimeToIso(startValue.trim(), log.start);
+      if (!startIso) {
+        alert("開始時間の形式が正しくありません。例：09:30:00");
+        return;
+      }
+
+      const endValue = prompt("終了時間（hh:mm:ss）", timeText(log.end));
+      if (endValue === null) return;
+      const endIso = localTimeToIso(endValue.trim(), log.end || log.start);
+      if (!endIso) {
+        alert("終了時間の形式が正しくありません。例：10:15:00");
+        return;
+      }
+      if (new Date(endIso).getTime() < new Date(startIso).getTime()) {
+        alert("終了時間は開始時間以降にしてください。日付をまたぐ編集は後続バージョンで対応します。");
+        return;
+      }
+
+      log.itemName = trimmedName;
+      log.customName = trimmedName;
+      log.itemId = null;
+      log.start = startIso;
+      log.end = endIso;
+      recalcLog(log);
       saveState();
       renderAll();
     }
@@ -559,6 +603,7 @@ function renderItemManageList() {
       if(button.dataset.stop) stopPanel(button.dataset.stop);
       if(button.dataset.completePanel) completePanel(button.dataset.completePanel);
       if(button.dataset.deletePanel) deletePanel(button.dataset.deletePanel);
+      if(button.dataset.editLog) editLog(button.dataset.editLog);
       if(button.dataset.deleteLog) deleteLog(button.dataset.deleteLog);
       if(button.dataset.editItem) editItem(button.dataset.editItem);
       if(button.dataset.deleteItem) deleteItem(button.dataset.deleteItem);
