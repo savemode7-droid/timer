@@ -1,10 +1,11 @@
-// Timer App app.js v39.5 Step1
+// Timer App app.js v39.5 Step1.2.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
     const $ = (id) => document.getElementById(id);
 
     let state = loadState();
+    let activeItemManageType = "item1";
 
     function pad(n) { return String(n).padStart(2, "0"); }
     function dateKey(d = new Date()) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -282,20 +283,29 @@
 
 function renderItemManageList() {
       const area = $("itemManageList");
-      const item1s = sortedItems();
-      const item2s = sortedItem2s();
-      const section = (title, items, editAttr, deleteAttr, emptyText) => `
+      const title = $("itemDialogTitle");
+      const isItem2 = activeItemManageType === "item2";
+
+      const item1Section = document.querySelector("#newItemName")?.closest(".item-manage-section");
+      const item2Section = document.querySelector("#newItem2Name")?.closest(".item-manage-section");
+      if (item1Section) item1Section.style.display = isItem2 ? "none" : "";
+      if (item2Section) item2Section.style.display = isItem2 ? "" : "none";
+      if (title) title.textContent = isItem2 ? "項目2管理" : "項目1管理";
+
+      const items = isItem2 ? sortedItem2s() : sortedItems();
+      const editAttr = isItem2 ? "data-edit-item2" : "data-edit-item";
+      const deleteAttr = isItem2 ? "data-delete-item2" : "data-delete-item";
+      const label = isItem2 ? "項目2" : "項目1";
+      const emptyText = `${label}はまだありません。`;
+      area.innerHTML = `
         <div class="item-manage-section">
-          <div class="item-manage-heading">${escapeHtml(title)}</div>
+          <div class="item-manage-heading">${escapeHtml(label)}一覧</div>
           ${items.length ? items.map(item => `
             <div class="item-card">
               <div class="item-line"><span class="item-name">${escapeHtml(item.name)}</span><span class="item-kana">${escapeHtml(item.kana)}</span></div>
               <div class="item-actions"><button class="ghost mini-btn" ${editAttr}="${item.id}">編集</button><button class="danger mini-btn" ${deleteAttr}="${item.id}">削除</button></div>
             </div>`).join("") : `<div class="empty">${escapeHtml(emptyText)}</div>`}
         </div>`;
-      area.innerHTML =
-        section("項目1", item1s, "data-edit-item", "data-delete-item", "項目1はまだありません。") +
-        section("項目2", item2s, "data-edit-item2", "data-delete-item2", "項目2はまだありません。");
     }
 
     function currentLogsForCalc() {
@@ -637,8 +647,15 @@ function renderItemManageList() {
     function exportMonthCsv() { const target=$("monthFilter")?.value||monthKey(); const fmt=$("exportFormat")?.value||"csv"; const logs=currentLogsForCalc().filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target); fmt==="excel" ? exportExcelFile(logs,`作業タイマー記録_${target}.xls`) : exportCsvFile(logs,`作業タイマー記録_${target}.csv`); }
     function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); saveState(); renderAll(); }
 
+    function openItemDialog(type) {
+      activeItemManageType = type;
+      renderItemManageList();
+      $("itemDialog").showModal();
+    }
+
     $("addPanelBtn").addEventListener("click", () => addPanel(true));
-    $("openItemDialogBtn").addEventListener("click", () => { renderItemManageList(); $("itemDialog").showModal(); });
+    $("openItem1DialogBtn").addEventListener("click", () => openItemDialog("item1"));
+    $("openItem2DialogBtn").addEventListener("click", () => openItemDialog("item2"));
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
     $("addItem2Btn").addEventListener("click", addItem2FromDialog);
