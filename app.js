@@ -1,4 +1,4 @@
-// Timer App app.js v39.0 Step1
+// Timer App app.js v39.0 Step2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -367,16 +367,11 @@ function renderItemManageList() {
     function deletePanel(id) {
       const panel = state.panels.find(p=>p.id===id);
       if (!panel) return;
-      const linkedLogs = state.logs.filter(l => l.panelId === id);
-      const hasLinkedLog = linkedLogs.length > 0;
-      const msg = hasLinkedLog
-        ? "この作業パネルと、このパネルに紐づく記録を削除します。よろしいですか？"
-        : "この作業パネルを削除しますか？記録は残ります。";
-      if (!confirm(msg)) return;
+      // v39.0 Step2: パネル削除と記録削除を分離する。
+      // パネルを削除しても、作成済みの記録は残す。
+      // 記録を消したい場合は、記録一覧側の削除ボタンから削除する。
+      if (!confirm("この作業パネルを削除しますか？記録は残ります。")) return;
       state.panels = state.panels.filter(p=>p.id!==id);
-      // v38: 項目選択ありカードの記録はカード非連動なので消さない。
-      // 手入力のみ・未分類カードの連動記録だけ消す。
-      if (hasLinkedLog) state.logs = state.logs.filter(l=>l.panelId!==id);
       if (!state.panels.length) state.panels.push(newPanel());
       saveState(); renderAll();
     }
