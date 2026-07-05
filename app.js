@@ -1,4 +1,4 @@
-// Timer App app.js v39.2
+// Timer App app.js v39.2.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -539,13 +539,13 @@ function renderItemManageList() {
       panel.end = nowIso();
       panel.running = false;
 
-      // v39.0 Step4.1: 終了時に初めて記録を作成して表示する。
-      const log = createLogFromPanel(panel, panel.end);
+      // v39.2.1: 終了ボタンでは記録を作成しない。
+      // 終了は作業時間を確定するだけ。記録登録は完了ボタンで行う。
       panel.activeLogId = null;
-      panel.lastLogId = log ? log.id : null;
+      panel.lastLogId = null;
 
       // v39.2: 完了パネル一覧は廃止。
-      // 終了後もパネルは作業側に残し、「完了」ボタンでパネルだけ削除する。
+      // 終了後もパネルは作業側に残し、「完了」ボタンで記録登録＋パネル削除する。
       panel.completed = false;
       panel.collapsed = false;
       saveState(); renderAll();
@@ -554,8 +554,14 @@ function renderItemManageList() {
     function completePanel(id) {
       const panel = state.panels.find(p=>p.id===id);
       if (!panel || panel.running) return;
-      // v39.2: 完了パネル一覧は廃止。
-      // 完了ボタンは、作成済みの記録を残したまま作業パネルだけ削除する。
+      if (!panel.start || !panel.end) {
+        alert("終了してから完了してください。");
+        return;
+      }
+
+      // v39.2.1: 完了ボタンで記録を作成し、その後パネルだけ削除する。
+      const log = createLogFromPanel(panel, panel.end);
+      panel.lastLogId = log ? log.id : null;
       state.panels = state.panels.filter(p => p.id !== id);
       if (!state.panels.length) state.panels.push(newPanel());
       saveState(); renderAll();
