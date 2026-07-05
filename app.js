@@ -1,4 +1,4 @@
-// Timer App app.js v39.0 Step3
+// Timer App app.js v39.0 Step4
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -131,13 +131,8 @@
         if (panel.start) {
           if (panel.running) {
             panel.end = endOfOldDay;
-            const log = panel.activeLogId ? logById(panel.activeLogId) : null;
-            if (log) {
-              log.end = panel.end;
-              log.completed = !panel.itemId;
-              recalcLog(log);
-              panel.lastLogId = log.id;
-            }
+            const log = createLogFromPanel(panel, panel.end);
+            panel.lastLogId = log ? log.id : null;
             panel.activeLogId = null;
           }
           panel.running = false;
@@ -262,8 +257,7 @@ function renderItemManageList() {
     function currentLogsForCalc() {
       ensureLogLinks();
       return state.logs.map(l => {
-        const runningPanel = state.panels.find(p => p.running && p.activeLogId === l.id);
-        const copy = {...l, end: runningPanel ? nowIso() : l.end};
+        const copy = {...l};
         recalcLog(copy);
         return copy;
       });
@@ -373,21 +367,30 @@ function renderItemManageList() {
       renderAll();
     }
 
+    function createLogFromPanel(panel, endIso) {
+      if (!panel || !panel.start) return null;
+      const start = panel.start;
+      const end = endIso || panel.end || nowIso();
+      const log = {
+        id: crypto.randomUUID(),
+        panelId: null,
+        itemId: panel.itemId || null,
+        customName: panel.customName || "",
+        itemName: buildItemName(panel),
+        start,
+        end,
+        date: dateKey(new Date(start)),
+        durationMs: Math.max(0, new Date(end).getTime() - new Date(start).getTime()),
+        completed: !panel.itemId
+      };
+      state.logs.push(log);
+      return log;
+    }
+
     function updateLogFromPanel(panel) {
-      // v39.0 Step3:
-      // パネルと記録の恒久的な連動はしない。
-      // ただし計測中だけは、現在動いている記録へ表示名を反映する。
-      if (!panel || !panel.running || !panel.activeLogId) return;
-      const log = logById(panel.activeLogId);
-      if (!log) return;
-      log.itemId = panel.itemId || null;
-      log.customName = panel.customName || "";
-      log.itemName = buildItemName(panel);
-      log.start = panel.start || log.start;
-      log.end = nowIso();
-      log.date = dateKey(new Date(log.start));
-      log.completed = false;
-      recalcLog(log);
+      // v39.0 Step4:
+      // 開始時には記録を作成しない。
+      // 終了時に createLogFromPanel() で初めて記録へ追加する。
     }
 
     function changePanelItem(panelId, itemId) {
@@ -412,28 +415,17 @@ function renderItemManageList() {
     function startPanel(id) {
       const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
       const now = nowIso();
-      const log = {
-        id: crypto.randomUUID(),
-        panelId: null,
-        itemId: panel.itemId || null,
-        customName: panel.customName || "",
-        itemName: buildItemName(panel),
-        start: now,
-        end: now,
-        date: dateKey(new Date(now)),
-        durationMs: 0,
-        completed: false
-      };
-      state.logs.push(log);
 
+      // v39.0 Step4: 開始時には記録を作成しない。
+      // 記録一覧には、終了ボタンを押した時点で追加する。
       panel.start = now;
-      panel.end = now;
+      panel.end = null;
       panel.running = true;
       panel.completed = false;
       panel.collapsed = false;
       panel.date = dateKey(new Date(panel.start));
-      panel.activeLogId = log.id;
-      panel.lastLogId = log.id;
+      panel.activeLogId = null;
+      panel.lastLogId = null;
 
       // v38.2: 開始時に空の作業パネルを自動追加しない。
       // 新しい作業パネルが必要な場合は「作業パネルの追加」ボタンで追加する。
@@ -445,24 +437,17 @@ function renderItemManageList() {
       panel.end = nowIso();
       panel.running = false;
 
-      const log = panel.activeLogId ? logById(panel.activeLogId) : null;
-      if (log) {
-        log.end = panel.end;
-        log.itemId = panel.itemId || null;
-        log.customName = panel.customName || "";
-        log.itemName = buildItemName(panel);
-        log.completed = !panel.itemId;
-        recalcLog(log);
-        panel.lastLogId = log.id;
-      }
+      // v39.0 Step4: 終了時に初めて記録を作成して表示する。
+      const log = createLogFromPanel(panel, panel.end);
       panel.activeLogId = null;
+      panel.lastLogId = log ? log.id : null;
 
       if (panel.itemId) {
         // v38: 定番項目カードは終了後も作業側に残し、再開始できる。
         panel.completed = false;
         panel.collapsed = false;
       } else {
-        // v38: 手入力のみ・未分類カードは終了時に完了へ移動し、記録と連動する。
+        // v39.0 Step4: 手入力のみ・未分類カードは終了時に完了へ移動するが、記録とは連動しない。
         panel.completed = true;
         panel.collapsed = true;
       }
@@ -580,16 +565,12 @@ function renderItemManageList() {
 
     setInterval(() => {
       if (finalizeIfDateChanged()) return;
-      let changed = false;
       state.panels.forEach(panel => {
         if (!panel.running || !panel.start) return;
         const node=document.querySelector(`[data-elapsed="${panel.id}"]`);
         if(node) node.textContent = durationText(Date.now() - new Date(panel.start).getTime());
-        const log=panel.activeLogId ? logById(panel.activeLogId) : null;
-        if(log){ log.end=nowIso(); recalcLog(log); changed=true; }
       });
-      if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      renderSummary(); renderLogs();
+      renderSummary();
     }, 1000);
 
   
