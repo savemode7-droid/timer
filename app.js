@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step2.2
+// Timer App app.js v39.5 Step3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -124,7 +124,7 @@
       const part1 = item1 ? item1.name : "";
       const part2 = item2 ? item2.name : "";
       const free = (customName || "").trim();
-      // v39.5 Step2.2: 記録名は「項目1＋項目2＋手入力」。記録編集の項目2編集は次Stepで追加予定。
+      // v39.5 Step2.2: 記録名は「項目1＋項目2＋手入力」。記録編集でも項目2を編集できる。
       const name = `${part1}${part2}${free}`;
       return name || "未分類";
     }
@@ -443,14 +443,18 @@ function renderItemManageList() {
 
       const dialog = $("logEditDialog");
       const itemSelect = $("editLogItemId");
+      const item2Select = $("editLogItem2Id");
       const customInput = $("editLogCustomName");
       const startInput = $("editLogStart");
       const endInput = $("editLogEnd");
       const saveBtn = $("saveLogEditBtn");
 
       const items = sortedItems();
+      const item2s = sortedItem2s();
       itemSelect.innerHTML = `<option value="">未選択</option>` +
         items.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+      item2Select.innerHTML = `<option value="">未選択</option>` +
+        item2s.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
 
       const currentItem = log.itemId ? itemById(log.itemId) : null;
       if (currentItem) {
@@ -461,6 +465,7 @@ function renderItemManageList() {
         const name = (log.itemName || "").trim();
         customInput.value = (name && name !== "未分類") ? (log.customName || name) : (log.customName || "");
       }
+      item2Select.value = log.item2Id || "";
 
       startInput.value = dateTimeLocalValue(log.start);
       endInput.value = dateTimeLocalValue(log.end || log.start);
@@ -474,13 +479,14 @@ function renderItemManageList() {
       if (!log) return;
 
       const itemId = $("editLogItemId").value || null;
+      const item2Id = $("editLogItem2Id").value || null;
       const customName = $("editLogCustomName").value.trim();
-      const itemName = buildLogItemName(itemId, customName, log.item2Id || null);
+      const itemName = buildLogItemName(itemId, customName, item2Id);
       const startIso = dateTimeLocalToIso($("editLogStart").value);
       const endIso = dateTimeLocalToIso($("editLogEnd").value);
 
-      if (!itemId && !customName) {
-        alert("項目を選択するか、手入力を入力してください。");
+      if (!itemId && !item2Id && !customName) {
+        alert("項目1・項目2を選択するか、手入力を入力してください。");
         return;
       }
       if (!startIso || !endIso) {
@@ -493,8 +499,7 @@ function renderItemManageList() {
       }
 
       log.itemId = itemId;
-      // 項目2編集UIは v39.5 Step3 で追加予定。ここでは既存値を保持する。
-      log.item2Id = log.item2Id || null;
+      log.item2Id = item2Id;
       log.customName = customName;
       log.itemName = itemName;
       log.start = startIso;

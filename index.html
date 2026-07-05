@@ -18,13 +18,13 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=39.5-step2-2">
+  <link rel="stylesheet" href="style.css?v=39.5-step3">
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v39.5 Step2.2</span>
+      <span class="app-version">v39.5 Step3</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -113,8 +113,11 @@ Changes
     <div class="dialog-body">
       <div class="dialog-title">記録を編集</div>
       <div class="stack">
-        <label class="field-label" for="editLogItemId">項目</label>
+        <label class="field-label" for="editLogItemId">項目1</label>
         <select id="editLogItemId"></select>
+
+        <label class="field-label" for="editLogItem2Id">項目2</label>
+        <select id="editLogItem2Id"></select>
 
         <label class="field-label" for="editLogCustomName">手入力</label>
         <input id="editLogCustomName" placeholder="例：第38回、原稿修正" />
@@ -133,5 +136,5 @@ Changes
     </div>
   </dialog>
 
-  <script src="app.js?v=39.5-step2-2"></script>
+  <script src="app.js?v=39.5-step3"></script>
 </html>
