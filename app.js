@@ -267,13 +267,10 @@
 
         return `
           <div class="timer-panel ${completed ? "completed" : ""} ${panelCollapsed ? "collapsed" : ""} ${extraClass}" data-panel-id="${panel.id}">
-            <div class="panel-head">
-              <button class="panel-toggle-btn" data-toggle-panel="${panel.id}" type="button">
-                <span class="panel-toggle-mark">${collapseMark}</span>
-                <span class="panel-title">${escapeHtml(displayTitle)}</span>
-                <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
-              </button>
-              <button class="panel-title-edit-btn" data-edit-panel-title="${panel.id}" type="button" aria-label="見出し編集">✏️</button>
+            <div class="panel-head panel-head-clickable" data-panel-head-toggle="${panel.id}">
+              <span class="panel-toggle-mark">${collapseMark}</span>
+              <span class="panel-title panel-title-clickable" data-edit-panel-title="${panel.id}" title="見出しを編集">${escapeHtml(displayTitle)}</span>
+              <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}" type="button">削除</button>
             </div>
 
@@ -729,33 +726,40 @@ function renderItemManageList() {
       }
     });
     document.body.addEventListener("click", e => {
+      const titleTarget = e.target.closest("[data-edit-panel-title]");
+      if (titleTarget) {
+        e.stopPropagation();
+        editPanelTitle(titleTarget.dataset.editPanelTitle);
+        return;
+      }
+
       const button = e.target.closest("button");
-      if (!button) return;
+      if (button) {
+        const toggleGroup = button.closest("[data-toggle-panel-group]");
+        if (toggleGroup) {
+          togglePanelGroup(toggleGroup.dataset.togglePanelGroup);
+          return;
+        }
 
-      const togglePanelButton = button.closest("[data-toggle-panel]");
-      if (togglePanelButton) {
-        togglePanel(togglePanelButton.dataset.togglePanel);
+        if(button.dataset.savePanelTitle) { savePanelTitle(button.dataset.savePanelTitle); return; }
+        if(button.dataset.start) { startPanel(button.dataset.start); return; }
+        if(button.dataset.stop) { stopPanel(button.dataset.stop); return; }
+        if(button.dataset.completePanel) { completePanel(button.dataset.completePanel); return; }
+        if(button.dataset.deletePanel) { deletePanel(button.dataset.deletePanel); return; }
+        if(button.dataset.editLog) { editLog(button.dataset.editLog); return; }
+        if(button.dataset.deleteLog) { deleteLog(button.dataset.deleteLog); return; }
+        if(button.dataset.editItem) { editItem(button.dataset.editItem); return; }
+        if(button.dataset.deleteItem) { deleteItem(button.dataset.deleteItem); return; }
+        if(button.dataset.editItem2) { editItem2(button.dataset.editItem2); return; }
+        if(button.dataset.deleteItem2) { deleteItem2(button.dataset.deleteItem2); return; }
         return;
       }
 
-      const toggleGroup = button.closest("[data-toggle-panel-group]");
-      if (toggleGroup) {
-        togglePanelGroup(toggleGroup.dataset.togglePanelGroup);
+      const headTarget = e.target.closest("[data-panel-head-toggle]");
+      if (headTarget) {
+        togglePanel(headTarget.dataset.panelHeadToggle);
         return;
       }
-
-      if(button.dataset.editPanelTitle) editPanelTitle(button.dataset.editPanelTitle);
-      if(button.dataset.savePanelTitle) savePanelTitle(button.dataset.savePanelTitle);
-      if(button.dataset.start) startPanel(button.dataset.start);
-      if(button.dataset.stop) stopPanel(button.dataset.stop);
-      if(button.dataset.completePanel) completePanel(button.dataset.completePanel);
-      if(button.dataset.deletePanel) deletePanel(button.dataset.deletePanel);
-      if(button.dataset.editLog) editLog(button.dataset.editLog);
-      if(button.dataset.deleteLog) deleteLog(button.dataset.deleteLog);
-      if(button.dataset.editItem) editItem(button.dataset.editItem);
-      if(button.dataset.deleteItem) deleteItem(button.dataset.deleteItem);
-      if(button.dataset.editItem2) editItem2(button.dataset.editItem2);
-      if(button.dataset.deleteItem2) deleteItem2(button.dataset.deleteItem2);
     });
 
 

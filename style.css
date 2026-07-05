@@ -1190,16 +1190,14 @@ button.complete-btn:disabled {
 }
 
 
-/* v39.5 Step2.1: panel display title editor */
-.panel-title-edit-btn {
-  flex: 0 0 auto;
-  border: 1px solid rgba(255,255,255,.45);
-  background: rgba(255,255,255,.16) !important;
-  color: inherit !important;
-  border-radius: 10px;
-  padding: 6px 9px;
-  font-size: 16px;
-  line-height: 1;
+/* v39.5 Step2.1.1: panel title text opens title editor */
+.panel-title-clickable {
+  cursor: text;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.panel-head-clickable {
+  cursor: pointer;
 }
 .panel-title-editor {
   margin: 10px 0 12px;
@@ -1298,4 +1296,25 @@ button.complete-btn:disabled {
   font-weight: 800;
   color: #475569;
   margin: 4px 0 6px;
+}
+
+
+/* v39.5 Step2.1.1: header area toggles, title text edits */
+.panel-head.panel-head-clickable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-head.panel-head-clickable .panel-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.panel-head.panel-head-clickable .small {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.panel-title-clickable:active {
+  opacity: .75;
 }
