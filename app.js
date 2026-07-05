@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step3
+// Timer App app.js v39.5 Step4
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -564,13 +564,16 @@ function renderItemManageList() {
         id: crypto.randomUUID(),
         panelId: null,
         itemId: panel.itemId || null,
+        item2Id: panel.item2Id || null,
         customName: panel.customName || "",
+        // v39.5 Step4: 見出し(panel.title)はパネル専用ラベル。
+        // 記録名は正式データ「項目1＋項目2＋手入力」だけから作成する。
         itemName: buildItemName(panel),
         start,
         end,
         date: dateKey(new Date(start)),
         durationMs: Math.max(0, new Date(end).getTime() - new Date(start).getTime()),
-        completed: !panel.itemId
+        completed: true
       };
       state.logs.push(log);
       return log;
