@@ -1,7 +1,7 @@
 <!--
 ==================================================
 作業タイマー
-Version : v39.1-record-edit
+Version : v39.1.1-record-edit-dialog
 Base    : v38.5 step1 actual
 Date    : 2026-07-05
 
@@ -18,13 +18,13 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=39.1">
+  <link rel="stylesheet" href="style.css?v=39.1.1">
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v39.1</span>
+      <span class="app-version">v39.1.1</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -93,5 +93,27 @@ Changes
     </div>
   </dialog>
 
-  <script src="app.js?v=39.1"></script>
+
+  <dialog id="logEditDialog">
+    <div class="dialog-body">
+      <div class="dialog-title">記録を編集</div>
+      <div class="stack">
+        <label class="field-label" for="editLogItemName">項目</label>
+        <select id="editLogItemName"></select>
+
+        <label class="field-label" for="editLogStart">開始時間</label>
+        <input id="editLogStart" type="datetime-local" />
+
+        <label class="field-label" for="editLogEnd">終了時間</label>
+        <input id="editLogEnd" type="datetime-local" />
+
+        <div class="row dialog-actions">
+          <button id="saveLogEditBtn">保存</button>
+          <button class="ghost" id="cancelLogEditBtn">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=39.1.1"></script>
 </html>

@@ -1,4 +1,4 @@
-// Timer App app.js v39.1
+// Timer App app.js v39.1.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -120,6 +120,21 @@
       const [h,m,s=0] = parts;
       base.setHours(h,m,s,0);
       return base.toISOString();
+    }
+
+    function dateTimeLocalValue(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return "";
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function dateTimeLocalToIso(value) {
+      if (!value) return null;
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return null;
+      d.setSeconds(0, 0);
+      return d.toISOString();
     }
 
     function finalizeIfDateChanged() {
@@ -357,41 +372,52 @@ function renderItemManageList() {
       const log = state.logs.find(l => l.id === id);
       if (!log) return;
 
-      const itemName = prompt("項目", log.itemName || "未分類");
-      if (itemName === null) return;
-      const trimmedName = itemName.trim();
-      if (!trimmedName) {
-        alert("項目は空にできません。");
+      const dialog = $("logEditDialog");
+      const itemSelect = $("editLogItemName");
+      const startInput = $("editLogStart");
+      const endInput = $("editLogEnd");
+      const saveBtn = $("saveLogEditBtn");
+
+      const currentName = log.itemName || "未分類";
+      const names = [...new Set([currentName, ...sortedItems().map(i => i.name), "未分類"].filter(Boolean))];
+      itemSelect.innerHTML = names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+      itemSelect.value = currentName;
+      startInput.value = dateTimeLocalValue(log.start);
+      endInput.value = dateTimeLocalValue(log.end || log.start);
+      saveBtn.dataset.editingLogId = log.id;
+      dialog.showModal();
+    }
+
+    function saveLogEdit() {
+      const id = $("saveLogEditBtn").dataset.editingLogId;
+      const log = state.logs.find(l => l.id === id);
+      if (!log) return;
+
+      const itemName = $("editLogItemName").value.trim();
+      const startIso = dateTimeLocalToIso($("editLogStart").value);
+      const endIso = dateTimeLocalToIso($("editLogEnd").value);
+
+      if (!itemName) {
+        alert("項目を選択してください。");
         return;
       }
-
-      const startValue = prompt("開始時間（hh:mm:ss）", timeText(log.start));
-      if (startValue === null) return;
-      const startIso = localTimeToIso(startValue.trim(), log.start);
-      if (!startIso) {
-        alert("開始時間の形式が正しくありません。例：09:30:00");
-        return;
-      }
-
-      const endValue = prompt("終了時間（hh:mm:ss）", timeText(log.end));
-      if (endValue === null) return;
-      const endIso = localTimeToIso(endValue.trim(), log.end || log.start);
-      if (!endIso) {
-        alert("終了時間の形式が正しくありません。例：10:15:00");
+      if (!startIso || !endIso) {
+        alert("開始時間と終了時間を入力してください。");
         return;
       }
       if (new Date(endIso).getTime() < new Date(startIso).getTime()) {
-        alert("終了時間は開始時間以降にしてください。日付をまたぐ編集は後続バージョンで対応します。");
+        alert("終了時間は開始時間以降にしてください。");
         return;
       }
 
-      log.itemName = trimmedName;
-      log.customName = trimmedName;
+      log.itemName = itemName;
+      log.customName = itemName;
       log.itemId = null;
       log.start = startIso;
       log.end = endIso;
       recalcLog(log);
       saveState();
+      $("logEditDialog").close();
       renderAll();
     }
 
@@ -570,6 +596,8 @@ function renderItemManageList() {
     $("closeDialogBtn").addEventListener("click", () => $("itemDialog").close());
     $("addItemBtn").addEventListener("click", addItemFromDialog);
     $("newItemKana").addEventListener("keydown", e => { if(e.key==="Enter") addItemFromDialog(); });
+    $("saveLogEditBtn").addEventListener("click", saveLogEdit);
+    $("cancelLogEditBtn").addEventListener("click", () => $("logEditDialog").close());
     $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); renderSummary(); });
     $("dateFilter").addEventListener("change", () => { renderLogs(); renderSummary(); });
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
