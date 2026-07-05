@@ -1,4 +1,4 @@
-// Timer App app.js v39.3
+// Timer App app.js v39.3.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -364,8 +364,10 @@ function renderItemManageList() {
     function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
 
     function addPanel(shouldRender=true) {
-      // v39.3: 「作業パネルの追加」で作成したパネルは、初期状態で折りたたむ。
-      state.panels.push(newPanel(true));
+      // v39.3.1: 「作業パネルの追加」で作成したパネルは、初期状態で必ず折りたたむ。
+      const panel = newPanel(true);
+      panel.collapsed = true;
+      state.panels.push(panel);
       saveState();
       if (shouldRender) renderAll();
     }
