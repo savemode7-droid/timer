@@ -1,4 +1,4 @@
-// Timer App app.js v39.0 Step2
+// Timer App app.js v39.0 Step3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -19,7 +19,7 @@
 
     function newPanel() {
       const id = crypto.randomUUID();
-      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:false, date:dateKey(), activeLogId:null, lastLogId:null, linkedToLog:false };
+      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:false, date:dateKey(), activeLogId:null, lastLogId:null };
     }
 
     function loadState() {
@@ -38,8 +38,8 @@
         const start = l.start || nowIso();
         const end = l.end || start;
         return {
-          id: l.id || l.panelId || crypto.randomUUID(),
-          panelId: l.panelId || l.id || crypto.randomUUID(),
+          id: l.id || crypto.randomUUID(),
+          panelId: null,
           itemId: l.itemId || null,
           customName: l.customName || "",
           itemName: l.itemName || "未分類",
@@ -53,23 +53,21 @@
       let panels = [];
       if (Array.isArray(s.panels) && s.panels.length) {
         panels = s.panels.map(p => {
-          const id = p.id || p.activeLogId || p.lastLogId || crypto.randomUUID();
-          const linkedLog = logs.find(l => l.id === id || l.panelId === id || l.id === p.activeLogId || l.id === p.lastLogId);
-          const start = p.start || linkedLog?.start || p.runningSince || null;
-          const end = p.end || linkedLog?.end || start;
+          const id = p.id || crypto.randomUUID();
+          const start = p.start || p.runningSince || null;
+          const end = p.end || start;
           return {
             id,
-            itemId: p.itemId || linkedLog?.itemId || null,
-            customName: p.customName || linkedLog?.customName || "",
+            itemId: p.itemId || null,
+            customName: p.customName || "",
             start,
             end,
             running: !!(p.running || p.runningSince),
-            completed: !!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed),
-            collapsed: (p.collapsed !== undefined) ? !!p.collapsed : (!!p.completed || (!!linkedLog && !p.runningSince && !!linkedLog.completed)),
+            completed: !!p.completed,
+            collapsed: (p.collapsed !== undefined) ? !!p.collapsed : !!p.completed,
             date: p.date || (start ? dateKey(new Date(start)) : dateKey()),
             activeLogId: p.activeLogId || null,
-            lastLogId: p.lastLogId || linkedLog?.id || null,
-            linkedToLog: (p.linkedToLog !== undefined) ? !!p.linkedToLog : (!p.itemId && !!linkedLog)
+            lastLogId: p.lastLogId || null
           };
         });
       }
@@ -81,43 +79,17 @@
     }
 
     function ensureLogLinks(target = state) {
-      target.panels.forEach(panel => {
-        // v38: 記録との連動は「手入力のみ・未分類」カードだけに限定する。
-        // 項目選択ありカードは、開始のたびにカード非連動の記録を作成する。
-        const shouldLink = !!panel.linkedToLog;
-        if (!shouldLink || !panel.start) return;
-
-        let log = target.logs.find(l => l.panelId === panel.id || l.id === panel.id);
-        const itemName = buildItemName(panel, target.items);
-        const end = panel.running ? nowIso() : (panel.end || panel.start);
-        if (!log) {
-          log = { id: panel.id, panelId: panel.id, itemId: panel.itemId || null, customName: panel.customName || "", itemName, start: panel.start, end, date: panel.date || dateKey(new Date(panel.start)), durationMs:0, completed:panel.completed };
-          target.logs.push(log);
-        }
-        log.id = panel.id;
-        log.panelId = panel.id;
-        log.itemId = panel.itemId || null;
-        log.customName = panel.customName || "";
-        log.itemName = itemName;
-        log.start = panel.start;
-        log.end = end;
-        log.date = panel.date || dateKey(new Date(panel.start));
-        log.completed = !!panel.completed;
-        recalcLog(log);
-        panel.linkedToLog = true;
-        panel.lastLogId = log.id;
-        if (panel.running) panel.activeLogId = log.id;
-      });
+      // v39.0 Step3: パネルと記録の連動は廃止。
+      // 互換性維持のため関数名だけ残し、記録の自動同期は行わない。
     }
 
     function saveState() {
-      ensureLogLinks();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
     function sortedItems() { return [...state.items].sort((a,b)=>(a.kana||a.name).localeCompare((b.kana||b.name),"ja")); }
     function itemById(id) { return state.items.find(i=>i.id===id); }
-    function logById(id) { return state.logs.find(l=>l.id===id || l.panelId===id); }
+    function logById(id) { return state.logs.find(l=>l.id===id); }
 
     function buildItemName(panel, items = state.items) {
       const item = items.find(i=>i.id===panel.itemId);
@@ -159,7 +131,7 @@
         if (panel.start) {
           if (panel.running) {
             panel.end = endOfOldDay;
-            const log = panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
+            const log = panel.activeLogId ? logById(panel.activeLogId) : null;
             if (log) {
               log.end = panel.end;
               log.completed = !panel.itemId;
@@ -174,7 +146,6 @@
           panel.date = panel.date || oldDate;
         }
       });
-      ensureLogLinks();
       state.panels = [newPanel()];
       state.currentDate = today;
       saveState();
@@ -377,25 +348,13 @@ function renderItemManageList() {
     }
 
     function deleteLog(id) {
-      const log = state.logs.find(l => l.id === id || l.panelId === id);
+      const log = state.logs.find(l => l.id === id);
       if (!log) return;
       if (!confirm("この記録を削除しますか？")) return;
-
-      // v39.0 Step1: 記録は常に削除できるようにする。
-      // パネル側のIDは残しつつ、この記録を自動再作成しないように参照だけ外す。
-      state.panels.forEach(panel => {
-        if (panel.id === log.panelId || panel.activeLogId === log.id || panel.lastLogId === log.id) {
-          if (panel.activeLogId === log.id) panel.activeLogId = null;
-          if (panel.lastLogId === log.id) panel.lastLogId = null;
-          if (panel.id === log.panelId) panel.linkedToLog = false;
-        }
-      });
-
-      state.logs = state.logs.filter(l => l.id !== log.id && l.panelId !== log.panelId);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      state.logs = state.logs.filter(l => l.id !== log.id);
+      saveState();
       renderAll();
     }
-
 
     function togglePanel(id) {
       const panel = state.panels.find(p => p.id === id);
@@ -415,53 +374,20 @@ function renderItemManageList() {
     }
 
     function updateLogFromPanel(panel) {
-      // v38.1:
-      // 未分類で開始したカードは一旦「記録と連動」。
-      // 完了後に項目を選択したら連動を解除し、カード削除でも記録は残す。
-      // 手入力のみの場合は連動を維持し、カード削除で記録も削除する。
-      let log = null;
-      if (panel.activeLogId) log = logById(panel.activeLogId);
-      if (!log && panel.lastLogId) log = logById(panel.lastLogId);
-      if (!log && panel.linkedToLog) log = state.logs.find(l => l.panelId === panel.id || l.id === panel.id);
-
-      if (!log && panel.start && panel.linkedToLog) {
-        log = {
-          id: panel.id,
-          panelId: panel.id,
-          itemId: panel.itemId || null,
-          customName: panel.customName || "",
-          itemName: buildItemName(panel),
-          start: panel.start,
-          end: panel.end || panel.start,
-          date: panel.date || dateKey(new Date(panel.start)),
-          durationMs: 0,
-          completed: !!panel.completed
-        };
-        state.logs.push(log);
-        panel.lastLogId = log.id;
-      }
-
+      // v39.0 Step3:
+      // パネルと記録の恒久的な連動はしない。
+      // ただし計測中だけは、現在動いている記録へ表示名を反映する。
+      if (!panel || !panel.running || !panel.activeLogId) return;
+      const log = logById(panel.activeLogId);
       if (!log) return;
-
-      if (panel.completed && panel.itemId) {
-        // 完了後に項目を選択した場合は、定番項目扱いとして記録の連動を解除する。
-        log.panelId = null;
-        panel.linkedToLog = false;
-      } else if (panel.completed && !panel.itemId) {
-        // 手入力のみ、または未分類のままなら連動を維持する。
-        log.panelId = panel.id;
-        panel.linkedToLog = true;
-      }
-
       log.itemId = panel.itemId || null;
       log.customName = panel.customName || "";
       log.itemName = buildItemName(panel);
       log.start = panel.start || log.start;
-      log.end = panel.running ? nowIso() : (panel.end || log.end || log.start);
-      log.date = panel.date || dateKey(new Date(log.start));
-      log.completed = !!panel.completed;
+      log.end = nowIso();
+      log.date = dateKey(new Date(log.start));
+      log.completed = false;
       recalcLog(log);
-      panel.lastLogId = log.id;
     }
 
     function changePanelItem(panelId, itemId) {
@@ -486,11 +412,9 @@ function renderItemManageList() {
     function startPanel(id) {
       const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
       const now = nowIso();
-      const linkedToLog = !panel.itemId;
-      const logId = linkedToLog ? panel.id : crypto.randomUUID();
       const log = {
-        id: logId,
-        panelId: linkedToLog ? panel.id : null,
+        id: crypto.randomUUID(),
+        panelId: null,
         itemId: panel.itemId || null,
         customName: panel.customName || "",
         itemName: buildItemName(panel),
@@ -510,7 +434,6 @@ function renderItemManageList() {
       panel.date = dateKey(new Date(panel.start));
       panel.activeLogId = log.id;
       panel.lastLogId = log.id;
-      panel.linkedToLog = linkedToLog;
 
       // v38.2: 開始時に空の作業パネルを自動追加しない。
       // 新しい作業パネルが必要な場合は「作業パネルの追加」ボタンで追加する。
@@ -522,7 +445,7 @@ function renderItemManageList() {
       panel.end = nowIso();
       panel.running = false;
 
-      const log = panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
+      const log = panel.activeLogId ? logById(panel.activeLogId) : null;
       if (log) {
         log.end = panel.end;
         log.itemId = panel.itemId || null;
@@ -542,7 +465,6 @@ function renderItemManageList() {
         // v38: 手入力のみ・未分類カードは終了時に完了へ移動し、記録と連動する。
         panel.completed = true;
         panel.collapsed = true;
-        panel.linkedToLog = true;
       }
       saveState(); renderAll();
     }
@@ -561,7 +483,6 @@ function renderItemManageList() {
         panel.running = false;
         panel.completed = false;
         panel.collapsed = false;
-        panel.linkedToLog = false;
       } else {
         // 通常作業：完了グループへ移動した状態を維持する。
         panel.completed = true;
@@ -582,20 +503,20 @@ function renderItemManageList() {
       } else {
         panel.end = iso;
       }
-      const log = panel.activeLogId ? logById(panel.activeLogId) : (panel.linkedToLog ? logById(panel.id) : logById(panel.lastLogId));
+      const log = panel.activeLogId ? logById(panel.activeLogId) : null;
       if (log) {
         log.start = panel.start;
         log.end = panel.end || panel.start;
         log.date = dateKey(new Date(log.start));
         recalcLog(log);
       }
-      ensureLogLinks(); saveState(); renderAll();
+      saveState(); renderAll();
     }
 
     function createItem(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; state.items.push(item); return item; }
     function addItemFromDialog() { const name=$("newItemName").value.trim(); const kana=$("newItemKana").value.trim(); if(!name||!kana){ alert("項目名とふりがなを両方入力してください。"); return; } createItem(name,kana); $("newItemName").value=""; $("newItemKana").value=""; saveState(); renderAll(); }
-    function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); ensureLogLinks(); saveState(); renderAll(); }
-    function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」をプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); ensureLogLinks(); saveState(); renderAll(); }
+    function editItem(id) { const item=itemById(id); if(!item) return; const name=prompt("項目名", item.name); if(!name||!name.trim()) return; const kana=prompt("ふりがな", item.kana||item.name); if(!kana||!kana.trim()) return; item.name=name.trim(); item.kana=kana.trim(); saveState(); renderAll(); }
+    function deleteItem(id) { const item=itemById(id); if(!item) return; if(state.panels.some(p=>p.itemId===id && p.running)){ alert("計測中の項目は削除できません。先に終了してください。"); return; } if(!confirm(`「${item.name}」をプルダウンから削除しますか？記録名は現在の表示名で残ります。`)) return; state.items=state.items.filter(i=>i.id!==id); state.panels.forEach(p=>{ if(p.itemId===id) p.itemId=null; }); saveState(); renderAll(); }
 
     function exportCsvFile(logs, filename) {
       const rows = [["日付","項目","開始時間","終了時間","分"]];
@@ -612,7 +533,7 @@ function renderItemManageList() {
       const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
     }
     function exportMonthCsv() { const target=$("monthFilter")?.value||monthKey(); const fmt=$("exportFormat")?.value||"csv"; const logs=currentLogsForCalc().filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target); fmt==="excel" ? exportExcelFile(logs,`作業タイマー記録_${target}.xls`) : exportCsvFile(logs,`作業タイマー記録_${target}.csv`); }
-    function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); state.panels=state.panels.filter(p=>!removeIds.has(p.id)); if(!state.panels.length) state.panels.push(newPanel()); saveState(); renderAll(); }
+    function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); saveState(); renderAll(); }
 
     $("addPanelBtn").addEventListener("click", () => addPanel(true));
     $("openItemDialogBtn").addEventListener("click", () => { renderItemManageList(); $("itemDialog").showModal(); });
@@ -664,7 +585,7 @@ function renderItemManageList() {
         if (!panel.running || !panel.start) return;
         const node=document.querySelector(`[data-elapsed="${panel.id}"]`);
         if(node) node.textContent = durationText(Date.now() - new Date(panel.start).getTime());
-        const log=panel.activeLogId ? logById(panel.activeLogId) : logById(panel.id);
+        const log=panel.activeLogId ? logById(panel.activeLogId) : null;
         if(log){ log.end=nowIso(); recalcLog(log); changed=true; }
       });
       if(changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
