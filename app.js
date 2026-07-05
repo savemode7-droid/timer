@@ -1,4 +1,4 @@
-// Timer App app.js v39.2.1
+// Timer App app.js v39.3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -17,9 +17,9 @@
     function durationJa(ms) { const totalMin=Math.round(ms/60000); const h=Math.floor(totalMin/60), m=totalMin%60; if(h&&m) return `${h}時間${m}分`; if(h) return `${h}時間`; return `${m}分`; }
     function nowIso() { return new Date().toISOString(); }
 
-    function newPanel() {
+    function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
-      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:false, date:dateKey(), activeLogId:null, lastLogId:null };
+      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
     }
 
     function loadState() {
@@ -363,7 +363,12 @@ function renderItemManageList() {
 
     function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
 
-    function addPanel(shouldRender=true) { state.panels.push(newPanel()); saveState(); if (shouldRender) renderAll(); }
+    function addPanel(shouldRender=true) {
+      // v39.3: 「作業パネルの追加」で作成したパネルは、初期状態で折りたたむ。
+      state.panels.push(newPanel(true));
+      saveState();
+      if (shouldRender) renderAll();
+    }
 
     function deletePanel(id) {
       const panel = state.panels.find(p=>p.id===id);
