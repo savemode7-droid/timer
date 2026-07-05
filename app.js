@@ -1,4 +1,4 @@
-// Timer App app.js v38.9
+// Timer App app.js v39.0 Step1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -353,10 +353,7 @@ function renderItemManageList() {
       $("logs").innerHTML = logs.length
         ? `<table><thead><tr><th>項目</th><th>開始時間</th><th>終了時間</th><th class="right">作業時間</th><th class="log-action-cell">操作</th></tr></thead><tbody>` +
           logs.map(l=>{
-            const hasPanel = !!l.panelId && state.panels.some(p => p.id === l.panelId);
-            const action = hasPanel
-              ? `<button class="log-icon-btn locked" data-log-locked="${l.id}" title="作業パネルがあるため削除できません">🔒</button>`
-              : `<button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
+            const action = `<button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
             return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationJa(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
           }).join("") +
           `</tbody></table>`
@@ -385,21 +382,23 @@ function renderItemManageList() {
     }
 
     function deleteLog(id) {
-      const hasPanel = state.logs.some(l => (l.id === id || l.panelId === id) && l.panelId && state.panels.some(p => p.id === l.panelId));
-      if (hasPanel) {
-        alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
-        return;
-      }
       const log = state.logs.find(l => l.id === id || l.panelId === id);
       if (!log) return;
       if (!confirm("この記録を削除しますか？")) return;
-      state.logs = state.logs.filter(l => l.id !== id && l.panelId !== id);
-      saveState();
-      renderAll();
-    }
 
-    function showLockedLogMessage() {
-      alert("この記録は作業パネルと連携しています。先に作業パネルを削除してください。");
+      // v39.0 Step1: 記録は常に削除できるようにする。
+      // パネル側のIDは残しつつ、この記録を自動再作成しないように参照だけ外す。
+      state.panels.forEach(panel => {
+        if (panel.id === log.panelId || panel.activeLogId === log.id || panel.lastLogId === log.id) {
+          if (panel.activeLogId === log.id) panel.activeLogId = null;
+          if (panel.lastLogId === log.id) panel.lastLogId = null;
+          if (panel.id === log.panelId) panel.linkedToLog = false;
+        }
+      });
+
+      state.logs = state.logs.filter(l => l.id !== log.id && l.panelId !== log.panelId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
     }
 
 
@@ -659,7 +658,6 @@ function renderItemManageList() {
       if(button.dataset.completePanel) completePanel(button.dataset.completePanel);
       if(button.dataset.deletePanel) deletePanel(button.dataset.deletePanel);
       if(button.dataset.deleteLog) deleteLog(button.dataset.deleteLog);
-      if(button.dataset.logLocked) showLockedLogMessage();
       if(button.dataset.editItem) editItem(button.dataset.editItem);
       if(button.dataset.deleteItem) deleteItem(button.dataset.deleteItem);
     });
