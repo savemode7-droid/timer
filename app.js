@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step1.2.1.2
+// Timer App app.js v39.5 Step2.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -20,7 +20,7 @@
 
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
-      return { id, itemId:null, customName:"", start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
+      return { id, itemId:null, customName:"", title:"", editingTitle:false, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
     }
 
     function loadState() {
@@ -63,6 +63,8 @@
             id,
             itemId: p.itemId || null,
             customName: p.customName || "",
+            title: p.title || "",
+            editingTitle: !!p.editingTitle,
             start,
             end,
             running: !!(p.running || p.runningSince),
@@ -106,6 +108,13 @@
       if (base) return base;
       if (free) return free;
       return "未分類";
+    }
+
+
+
+    function panelDisplayTitle(panel) {
+      const title = (panel.title || "").trim();
+      return title || "作業";
     }
 
     function buildLogItemName(itemId, customName, items = state.items) {
@@ -192,13 +201,13 @@
       // v39.2: 完了パネル一覧は廃止。
       // 旧バージョンで完了グループに入っていたパネルは、記録を残したままパネルだけ取り除く。
       state.panels = state.panels.filter(panel => !panel.completed || panel.running);
-      if (!state.panels.length) state.panels.push(newPanel());
+      if (!state.panels.length) state.panels.push(newPanel(true));
     }
 
     function renderPanels() {
       const list = $("panelList");
       removeCompletedPanels();
-      if (!state.panels.length) state.panels.push(newPanel());
+      if (!state.panels.length) state.panels.push(newPanel(true));
       if (!state.panelGroups) state.panelGroups = { workCollapsed:false, templateCollapsed:false, completedCollapsed:true };
 
       const itemOptions = (selectedId) => `<option value="">項目を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
@@ -208,7 +217,7 @@
       // v39.4.1: 定型作業一覧は廃止。項目を選択してもパネルは移動しない。
       // v39.2: 完了パネル一覧は廃止したため、完了パネルは表示しない。
 
-      function panelHtml(panel, title, extraClass = "") {
+      function panelHtml(panel, extraClass = "") {
         const running = !!panel.running;
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
@@ -234,6 +243,16 @@
 
         const panelCollapsed = !!panel.collapsed;
         const collapseMark = panelCollapsed ? "▶" : "▼";
+        const displayTitle = panelDisplayTitle(panel);
+        const titleEditor = panel.editingTitle ? `
+            <div class="panel-title-editor">
+              <label class="field-label">見出し</label>
+              <input type="text" data-panel-title-input="${panel.id}" value="${escapeHtml(panel.title || "")}" placeholder="作業" />
+              <div class="title-editor-actions">
+                <button class="green" data-save-panel-title="${panel.id}" type="button">保存</button>
+              </div>
+            </div>
+          ` : "";
         const panelBody = panelCollapsed ? "" : `
             <div class="panel-body">
               <div class="item-input-row">
@@ -251,12 +270,14 @@
             <div class="panel-head">
               <button class="panel-toggle-btn" data-toggle-panel="${panel.id}" type="button">
                 <span class="panel-toggle-mark">${collapseMark}</span>
-                <span class="panel-title">${escapeHtml(title)}</span>
+                <span class="panel-title">${escapeHtml(displayTitle)}</span>
                 <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
               </button>
+              <button class="panel-title-edit-btn" data-edit-panel-title="${panel.id}" type="button" aria-label="見出し編集">✏️</button>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}" type="button">削除</button>
             </div>
 
+            ${titleEditor}
             ${panelBody}
           </div>
         `;
@@ -271,14 +292,14 @@
               <span class="panel-group-count">${panels.length}件</span>
             </button>
             ${collapsed ? "" : `<div class="panel-group-body">${
-              panels.length ? panels.map((panel, i) => panelHtml(panel, titleBuilder(panel, i), extraClass)).join("") : `<div class="panel-group-empty">パネルはありません。</div>`
+              panels.length ? panels.map((panel) => panelHtml(panel, extraClass)).join("") : `<div class="panel-group-empty">パネルはありません。</div>`
             }</div>`}
           </div>
         `;
       }
 
       list.innerHTML =
-        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, (p) => buildItemName(p).replace(/\s+/g,"") || "未分類");
+        groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, () => "");
     }
 
 function renderItemManageList() {
@@ -408,7 +429,7 @@ function renderItemManageList() {
       // 記録を消したい場合は、記録一覧側の削除ボタンから削除する。
       if (!confirm("この作業パネルを削除しますか？記録は残ります。")) return;
       state.panels = state.panels.filter(p=>p.id!==id);
-      if (!state.panels.length) state.panels.push(newPanel());
+      if (!state.panels.length) state.panels.push(newPanel(true));
       saveState(); renderAll();
     }
 
@@ -484,6 +505,29 @@ function renderItemManageList() {
       recalcLog(log);
       saveState();
       $("logEditDialog").close();
+      renderAll();
+    }
+
+
+    function editPanelTitle(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel) return;
+      panel.editingTitle = true;
+      saveState();
+      renderAll();
+      requestAnimationFrame(() => {
+        const input = document.querySelector(`[data-panel-title-input="${id}"]`);
+        if (input) { input.focus(); input.select(); }
+      });
+    }
+
+    function savePanelTitle(id) {
+      const panel = state.panels.find(p => p.id === id);
+      if (!panel) return;
+      const input = document.querySelector(`[data-panel-title-input="${id}"]`);
+      panel.title = (input?.value || "").trim();
+      panel.editingTitle = false;
+      saveState();
       renderAll();
     }
 
@@ -596,7 +640,7 @@ function renderItemManageList() {
       const log = createLogFromPanel(panel, panel.end);
       panel.lastLogId = log ? log.id : null;
       state.panels = state.panels.filter(p => p.id !== id);
-      if (!state.panels.length) state.panels.push(newPanel());
+      if (!state.panels.length) state.panels.push(newPanel(true));
       saveState(); renderAll();
     }
 
@@ -677,6 +721,13 @@ function renderItemManageList() {
       if(el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
     });
     document.body.addEventListener("input", e => { const el=e.target; if(el.dataset.customName) changeCustomName(el.dataset.customName, el.value); });
+    document.body.addEventListener("keydown", e => {
+      const el = e.target;
+      if (el?.dataset?.panelTitleInput && e.key === "Enter") {
+        e.preventDefault();
+        savePanelTitle(el.dataset.panelTitleInput);
+      }
+    });
     document.body.addEventListener("click", e => {
       const button = e.target.closest("button");
       if (!button) return;
@@ -693,6 +744,8 @@ function renderItemManageList() {
         return;
       }
 
+      if(button.dataset.editPanelTitle) editPanelTitle(button.dataset.editPanelTitle);
+      if(button.dataset.savePanelTitle) savePanelTitle(button.dataset.savePanelTitle);
       if(button.dataset.start) startPanel(button.dataset.start);
       if(button.dataset.stop) stopPanel(button.dataset.stop);
       if(button.dataset.completePanel) completePanel(button.dataset.completePanel);

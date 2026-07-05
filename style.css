@@ -1190,6 +1190,38 @@ button.complete-btn:disabled {
 }
 
 
+/* v39.5 Step2.1: panel display title editor */
+.panel-title-edit-btn {
+  flex: 0 0 auto;
+  border: 1px solid rgba(255,255,255,.45);
+  background: rgba(255,255,255,.16) !important;
+  color: inherit !important;
+  border-radius: 10px;
+  padding: 6px 9px;
+  font-size: 16px;
+  line-height: 1;
+}
+.panel-title-editor {
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.panel-title-editor input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+}
+.title-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.title-editor-actions button {
+  min-width: 96px;
+}
+
 /* v38.9: individual work panel collapse */
 .panel-head {
   gap: 6px;
