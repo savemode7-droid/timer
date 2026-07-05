@@ -1,4 +1,4 @@
-// Timer App app.js v39.4.1
+// Timer App app.js v39.4.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -667,6 +667,18 @@ function renderItemManageList() {
       if(button.dataset.editItem) editItem(button.dataset.editItem);
       if(button.dataset.deleteItem) deleteItem(button.dataset.deleteItem);
     });
+
+
+    function initializeApp() {
+      // v39.4.2: 画面更新時は日付と年月の初期表示を今日に合わせる。
+      // dateFilter は今日、monthFilter は renderMonthFilter() 内で当月が選択される。
+      const today = dateKey();
+      if ($("dateFilter")) $("dateFilter").value = today;
+      renderAll();
+      if ($("monthFilter")) $("monthFilter").value = monthKey();
+    }
+
+    initializeApp();
 
     setInterval(() => {
       if (finalizeIfDateChanged()) return;
