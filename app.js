@@ -1,4 +1,4 @@
-// Timer App app.js v38.4
+// Timer App app.js v38.7
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -319,9 +319,9 @@ function renderItemManageList() {
 
       $("summary").innerHTML = `
         <div class="period-summary cell-line">
-          <span class="summary-cell-label">今日</span><span class="summary-cell-value">${durationJa(todayTotal)}</span>
-          <span class="summary-cell-label">今週</span><span class="summary-cell-value">${durationJa(weekTotal)}</span>
-          <span class="summary-cell-label">今月</span><span class="summary-cell-value">${durationJa(monthTotal)}</span>
+          <span class="summary-cell-label">今日</span><span class="summary-cell-value">${durationText(todayTotal)}</span>
+          <span class="summary-cell-label">今週</span><span class="summary-cell-value">${durationText(weekTotal)}</span>
+          <span class="summary-cell-label">今月</span><span class="summary-cell-value">${durationText(monthTotal)}</span>
         </div>`;
     }
 
