@@ -1,4 +1,4 @@
-// Timer App app.js v39.3.1
+// Timer App app.js v39.3.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -243,7 +243,7 @@
           `;
 
         return `
-          <div class="timer-panel ${completed ? "completed" : ""} ${panelCollapsed ? "collapsed" : ""} ${extraClass}">
+          <div class="timer-panel ${completed ? "completed" : ""} ${panelCollapsed ? "collapsed" : ""} ${extraClass}" data-panel-id="${panel.id}">
             <div class="panel-head">
               <button class="panel-toggle-btn" data-toggle-panel="${panel.id}" type="button">
                 <span class="panel-toggle-mark">${collapseMark}</span>
@@ -364,12 +364,20 @@ function renderItemManageList() {
     function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
 
     function addPanel(shouldRender=true) {
-      // v39.3.1: 「作業パネルの追加」で作成したパネルは、初期状態で必ず折りたたむ。
+      // v39.3.2: 「作業パネルの追加」で作成したパネルは、折りたたみ状態で追加し、追加位置まで自動スクロールする。
       const panel = newPanel(true);
       panel.collapsed = true;
       state.panels.push(panel);
+      // 追加したパネルが見えるよう、作業グループは開いた状態にする。
+      state.panelGroups.workCollapsed = false;
       saveState();
-      if (shouldRender) renderAll();
+      if (shouldRender) {
+        renderAll();
+        requestAnimationFrame(() => {
+          const addedPanel = document.querySelector(`[data-panel-id="${panel.id}"]`);
+          if (addedPanel) addedPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
     }
 
     function deletePanel(id) {
