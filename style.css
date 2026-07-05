@@ -1190,7 +1190,7 @@ button.complete-btn:disabled {
 }
 
 
-/* v39.5 Step2.1.2: inline panel title editing */
+/* v39.5 Step2.1.3: inline panel title editing */
 .panel-title-clickable {
   cursor: text;
   text-decoration: underline;
@@ -1320,7 +1320,7 @@ button.complete-btn:disabled {
 }
 
 
-/* v39.5 Step2.1.2: inline title input */
+/* v39.5 Step2.1.3: inline title input */
 .panel-title-inline-input {
   min-width: 120px;
   max-width: min(60vw, 420px);
