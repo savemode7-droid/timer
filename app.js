@@ -1,4 +1,4 @@
-// Timer App app.js v39.6
+// Timer App app.js v39.7
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -222,10 +222,12 @@
         const completed = !!panel.completed;
         const elapsed = panel.start ? (running ? Date.now() - new Date(panel.start).getTime() : Math.max(0, new Date(panel.end || panel.start).getTime() - new Date(panel.start).getTime())) : 0;
         const canComplete = !!panel.end && !running && !completed;
+        const startEndButton = running
+          ? `<button class="end-btn" data-stop="${panel.id}">終了</button>`
+          : `<button class="start-btn" data-start="${panel.id}">開始</button>`;
         const actionControls = completed ? `` : `
             <div class="main-actions">
-              <button class="start-btn" data-start="${panel.id}" ${running ? "disabled" : ""}>開始</button>
-              <button class="end-btn" data-stop="${panel.id}" ${!running ? "disabled" : ""}>終了</button>
+              ${startEndButton}
               <button class="green complete-btn" data-complete-panel="${panel.id}" ${!canComplete ? "disabled" : ""}>完了</button>
             </div>
             <div class="elapsed" data-elapsed="${panel.id}">${durationText(elapsed)}</div>
