@@ -213,7 +213,7 @@
       const itemOptions = (selectedId) => `<option value="">項目1を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
       const item2Options = (selectedId) => `<option value="">項目2を選択</option>` + sortedItem2s().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
       const timerOptions = (selectedMinutes) => {
-        const options = [0, 5, 10, 15, 20, 25, 30, 45, 60, 90];
+        const options = [0,1,2,3,4,5,10,15,20,25,30,40,50,60];
         return options.map(min => {
           const label = min === 0 ? "タイマーなし" : `${min}分`;
           return `<option value="${min}" ${Number(selectedMinutes || 0) === min ? "selected" : ""}>${label}</option>`;
