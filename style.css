@@ -1341,3 +1341,24 @@ button.complete-btn:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* v39.8: record / summary / export section folding */
+.collapsible-section-title {
+  cursor: pointer;
+  user-select: none;
+  gap: 6px;
+}
+.section-toggle-mark {
+  display: inline-block;
+  width: 1.1em;
+  text-align: center;
+  font-weight: 900;
+}
+.collapsible-section.collapsed .collapsible-section-body {
+  display: none;
+}
+.collapsible-section.collapsed .section-title {
+  margin-bottom: -1px;
+  border-radius: 9px;
+}

@@ -1,4 +1,4 @@
-// Timer App app.js v39.7
+// Timer App app.js v39.8
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -29,7 +29,7 @@
         if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-      return { items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true } };
+      return { items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false } };
     }
 
     function normalizeState(s) {
@@ -80,7 +80,7 @@
       }
       if (!panels.length) panels = [newPanel()];
 
-      const normalized = { items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, ...(s.panelGroups || {}) } };
+      const normalized = { items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false, ...(s.panelGroups || {}) } };
       ensureLogLinks(normalized);
       return normalized;
     }
@@ -397,7 +397,7 @@ function renderItemManageList() {
         : `<div class="empty">この日の記録はありません。</div>`;
     }
 
-    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); }
+    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); updateSectionCollapse(); }
 
     function addPanel(shouldRender=true) {
       // v39.3.2: 「作業パネルの追加」で作成したパネルは、折りたたみ状態で追加し、追加位置まで自動スクロールする。
@@ -550,10 +550,37 @@ function renderItemManageList() {
     }
 
     function togglePanelGroup(kind) {
-      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, templateCollapsed: false, completedCollapsed: true };
+      if (!state.panelGroups) state.panelGroups = { workCollapsed: false, templateCollapsed: false, completedCollapsed: true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false };
       if (kind === "work") state.panelGroups.workCollapsed = !state.panelGroups.workCollapsed;
       saveState();
       renderAll();
+    }
+
+
+    function toggleSection(kind) {
+      if (!state.panelGroups) state.panelGroups = { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false };
+      const keyMap = { logs: "logsCollapsed", summary: "summaryCollapsed", export: "exportCollapsed" };
+      const key = keyMap[kind];
+      if (!key) return;
+      state.panelGroups[key] = !state.panelGroups[key];
+      saveState();
+      updateSectionCollapse();
+    }
+
+    function updateSectionCollapse() {
+      if (!state.panelGroups) state.panelGroups = { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false };
+      const sections = [
+        ["logs", "logsCollapsed"],
+        ["summary", "summaryCollapsed"],
+        ["export", "exportCollapsed"]
+      ];
+      sections.forEach(([kind, key]) => {
+        const collapsed = !!state.panelGroups[key];
+        const card = document.querySelector(`[data-section-card="${kind}"]`);
+        const mark = $(`${kind}ToggleMark`);
+        if (card) card.classList.toggle("collapsed", collapsed);
+        if (mark) mark.textContent = collapsed ? "▶" : "▼";
+      });
     }
 
     function createLogFromPanel(panel, endIso) {
@@ -773,6 +800,12 @@ function renderItemManageList() {
       if (titleTarget) {
         e.stopPropagation();
         editPanelTitle(titleTarget.dataset.editPanelTitle);
+        return;
+      }
+
+      const sectionToggle = e.target.closest("[data-toggle-section]");
+      if (sectionToggle) {
+        toggleSection(sectionToggle.dataset.toggleSection);
         return;
       }
 

@@ -1,7 +1,7 @@
 <!--
 ==================================================
 作業タイマー
-Version : v39.7-start-end-toggle
+Version : v39.8-section-collapse
 Base    : v38.5 step1 actual
 Date    : 2026-07-05
 
@@ -18,13 +18,13 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=39.5-step4">
+  <link rel="stylesheet" href="style.css?v=39.8-section-collapse">
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <span class="app-version">v39.7</span>
+      <span class="app-version">v39.8</span>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -49,19 +49,19 @@ Changes
       <div class="panel-list" id="panelList"></div>
     </section>
 
-    <section class="card section-card-blue">
-      <h2 class="section-title">記録</h2>
-      <div id="logs"></div>
+    <section class="card section-card-blue collapsible-section" data-section-card="logs">
+      <h2 class="section-title collapsible-section-title" data-toggle-section="logs"><span class="section-toggle-mark" id="logsToggleMark">▼</span><span>記録</span></h2>
+      <div id="logsSectionBody" class="collapsible-section-body"><div id="logs"></div></div>
     </section>
 
-    <section class="card section-card-blue">
-      <h2 class="section-title">合計</h2>
-      <div id="summary"></div>
+    <section class="card section-card-blue collapsible-section" data-section-card="summary">
+      <h2 class="section-title collapsible-section-title" data-toggle-section="summary"><span class="section-toggle-mark" id="summaryToggleMark">▼</span><span>合計</span></h2>
+      <div id="summarySectionBody" class="collapsible-section-body"><div id="summary"></div></div>
     </section>
 
-    <section class="card section-card-blue">
-      <h2 class="section-title">出力</h2>
-      <div class="export-panel">
+    <section class="card section-card-blue collapsible-section" data-section-card="export">
+      <h2 class="section-title collapsible-section-title" data-toggle-section="export"><span class="section-toggle-mark" id="exportToggleMark">▼</span><span>出力</span></h2>
+      <div id="exportSectionBody" class="collapsible-section-body"><div class="export-panel">
         <div class="export-select-row">
           <select id="monthFilter"></select>
           <select id="exportFormat">
@@ -75,7 +75,7 @@ Changes
         <div class="delete-row">
           <button class="delete-subtle" id="clearMonthBtn">選択月削除</button>
         </div>
-      </div>
+      </div></div>
     </section>
   </main>
 
@@ -136,5 +136,5 @@ Changes
     </div>
   </dialog>
 
-  <script src="app.js?v=39.7-start-end-toggle"></script>
+  <script src="app.js?v=39.8-section-collapse"></script>
 </html>
