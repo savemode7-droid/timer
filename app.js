@@ -1,4 +1,4 @@
-// Timer App app.js v39.10
+// Timer App app.js v40.0 Step1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -20,7 +20,7 @@
 
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
-      return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
+      return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, timerMinutes:0, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
     }
 
     function loadState() {
@@ -67,6 +67,7 @@
             customName: p.customName || "",
             title: p.title || "",
             editingTitle: !!p.editingTitle,
+            timerMinutes: Number(p.timerMinutes || 0),
             start,
             end,
             running: !!(p.running || p.runningSince),
@@ -211,6 +212,13 @@
 
       const itemOptions = (selectedId) => `<option value="">項目1を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
       const item2Options = (selectedId) => `<option value="">項目2を選択</option>` + sortedItem2s().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
+      const timerOptions = (selectedMinutes) => {
+        const options = [0, 5, 10, 15, 20, 25, 30, 45, 60, 90];
+        return options.map(min => {
+          const label = min === 0 ? "タイマーなし" : `${min}分`;
+          return `<option value="${min}" ${Number(selectedMinutes || 0) === min ? "selected" : ""}>${label}</option>`;
+        }).join("");
+      };
 
       const allPanels = sortedPanelsForDisplay();
       const workPanels = allPanels.filter(p => !p.completed);
@@ -226,7 +234,8 @@
           ? `<button class="end-btn" data-stop="${panel.id}">終了</button>`
           : `<button class="start-btn" data-start="${panel.id}">開始</button>`;
         const actionControls = completed ? `` : `
-            <div class="main-actions">
+            <div class="main-actions timer-action-row">
+              <select class="timer-select" data-timer-panel="${panel.id}" ${running ? "disabled" : ""}>${timerOptions(panel.timerMinutes)}</select>
               ${startEndButton}
               <button class="green complete-btn" data-complete-panel="${panel.id}" ${!canComplete ? "disabled" : ""}>完了</button>
             </div>
@@ -606,6 +615,27 @@ function renderItemManageList() {
       return log;
     }
 
+    function createTimerLogFromPanel(panel, startIso, minutes) {
+      const startDate = new Date(startIso);
+      const endDate = new Date(startDate.getTime() + Number(minutes) * 60000);
+      const log = {
+        id: crypto.randomUUID(),
+        panelId: null,
+        itemId: panel.itemId || null,
+        item2Id: panel.item2Id || null,
+        customName: panel.customName || "",
+        itemName: buildItemName(panel),
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        date: dateKey(startDate),
+        durationMs: Math.max(0, endDate.getTime() - startDate.getTime()),
+        completed: true,
+        timerMinutes: Number(minutes) || 0
+      };
+      state.logs.push(log);
+      return log;
+    }
+
     function updateLogFromPanel(panel) {
       // v39.0 Step4.1:
       // 開始時には記録を作成しない。
@@ -638,6 +668,12 @@ function renderItemManageList() {
       renderLogs();
     }
 
+    function changePanelTimer(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.timerMinutes = Math.max(0, Number(value || 0));
+      saveState();
+    }
+
     function startPanel(id) {
       const panel = state.panels.find(p=>p.id===id); if (!panel || panel.running || panel.completed) return;
 
@@ -649,6 +685,18 @@ function renderItemManageList() {
       }
 
       const now = nowIso();
+      const timerMinutes = Number(panel.timerMinutes || 0);
+
+      // v40.0 Step1: タイマーが指定されている場合は、開始時点で予定終了時刻までの記録を登録し、パネルを削除する。
+      // 例: 13:00に10分を指定して開始 → 13:00-13:10の記録を即登録。
+      if (timerMinutes > 0) {
+        createTimerLogFromPanel(panel, now, timerMinutes);
+        state.panels = state.panels.filter(p => p.id !== panel.id);
+        if (!state.panels.length) state.panels.push(newPanel(true));
+        saveState();
+        renderAll();
+        return;
+      }
 
       // v39.0 Step4.1: 開始時には記録を作成しない。
       // 記録一覧には、完了ボタンを押した時点で追加する。
@@ -779,6 +827,7 @@ function renderItemManageList() {
       if(el.dataset.select2Panel) changePanelItem2(el.dataset.select2Panel, el.value);
       if(el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
       if(el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
+      if(el.dataset.timerPanel) changePanelTimer(el.dataset.timerPanel, el.value);
     });
     document.body.addEventListener("input", e => { const el=e.target; if(el.dataset.customName) changeCustomName(el.dataset.customName, el.value); });
     document.body.addEventListener("keydown", e => {
