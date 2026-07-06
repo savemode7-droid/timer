@@ -1,4 +1,4 @@
-// Timer App app.js v39.5 Step4
+// Timer App app.js v39.6
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
@@ -165,24 +165,20 @@
     function finalizeIfDateChanged() {
       const today = dateKey();
       if (state.currentDate === today) return false;
+
+      // v39.6: 作業パネルは削除ボタンを押した時だけ消える。
+      // 日付が変わってもパネルは残す。計測中だったパネルだけ旧日の23:59:59で停止する。
       const oldDate = state.currentDate || today;
       const [y,m,d] = oldDate.split("-").map(Number);
       const endOfOldDay = new Date(y, m-1, d, 23, 59, 59, 0).toISOString();
       state.panels.forEach(panel => {
-        if (panel.start) {
-          if (panel.running) {
-            panel.end = endOfOldDay;
-            const log = createLogFromPanel(panel, panel.end);
-            panel.lastLogId = log ? log.id : null;
-            panel.activeLogId = null;
-          }
+        if (panel.running && panel.start) {
+          panel.end = endOfOldDay;
           panel.running = false;
-          panel.completed = true;
-          panel.collapsed = true;
-          panel.date = panel.date || oldDate;
+          panel.completed = false;
+          panel.activeLogId = null;
         }
       });
-      state.panels = [newPanel()];
       state.currentDate = today;
       saveState();
       return true;
@@ -199,9 +195,11 @@
       });
     }
     function removeCompletedPanels() {
-      // v39.2: 完了パネル一覧は廃止。
-      // 旧バージョンで完了グループに入っていたパネルは、記録を残したままパネルだけ取り除く。
-      state.panels = state.panels.filter(panel => !panel.completed || panel.running);
+      // v39.6: 作業パネルは削除ボタンを押した時だけ消える。
+      // 旧バージョンで completed=true になっていたパネルも作業パネルとして残す。
+      state.panels.forEach(panel => {
+        if (panel.completed && !panel.running) panel.completed = false;
+      });
       if (!state.panels.length) state.panels.push(newPanel(true));
     }
 
@@ -656,11 +654,15 @@ function renderItemManageList() {
         return;
       }
 
-      // v39.2.1: 完了ボタンで記録を作成し、その後パネルだけ削除する。
+      // v39.6: 完了ボタンでは記録だけ登録し、作業パネルは残す。
+      // 項目1・項目2・手入力・見出しは維持して、次回も同じパネルを再利用できるようにする。
       const log = createLogFromPanel(panel, panel.end);
       panel.lastLogId = log ? log.id : null;
-      state.panels = state.panels.filter(p => p.id !== id);
-      if (!state.panels.length) state.panels.push(newPanel(true));
+      panel.start = null;
+      panel.end = null;
+      panel.running = false;
+      panel.completed = false;
+      panel.activeLogId = null;
       saveState(); renderAll();
     }
 
