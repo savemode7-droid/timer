@@ -923,9 +923,12 @@
 .summary-cell-value {
   background: #fff;
   color: #1e40af;
-  padding: 7px 7px;
+  padding: 7px 8px;
   border-right: 1px solid #cbd5e1;
-  min-width: 58px;
+  min-width: 74px;
+  font-size: 18px;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
 }
 .summary-cell-value:last-child {
   border-right: 0;
@@ -964,9 +967,13 @@
   .period-summary.cell-line {
     font-size: 10px;
   }
-  .summary-cell-label,
-  .summary-cell-value {
+  .summary-cell-label {
     padding: 6px 5px;
+  }
+  .summary-cell-value {
+    padding: 6px 6px;
+    min-width: 68px;
+    font-size: 16px;
   }
 }
 
@@ -1362,3 +1369,6 @@ button.complete-btn:disabled {
   margin-bottom: -1px;
   border-radius: 9px;
 }
+
+
+/* v39.9: larger total numbers */

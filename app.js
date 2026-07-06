@@ -1,4 +1,4 @@
-// Timer App app.js v39.8
+// Timer App app.js v39.9
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
