@@ -1405,3 +1405,7 @@ button.complete-btn:disabled {
   border-radius: 6px;
   pointer-events: none;
 }
+
+.version-block{display:flex;flex-direction:column;align-items:flex-end}
+.version-block .app-version{font-size:.9rem;color:#94a3b8}
+.version-block .device-id-display{margin:2px 0 0 0;font-size:10px;color:#94a3b8;position:static}
