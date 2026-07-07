@@ -109,7 +109,7 @@
       color: var(--muted);
       font-size: 13px;
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-margin:8px 8px 4px auto;
     }
     .small { font-size: 13px; color: var(--muted); }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1393,11 +1393,11 @@ button.complete-btn:disabled {
 
 /* v40.1 Step1.1: Device ID display */
 .device-id-display {
-  position: fixed;
-  right: 8px;
-  bottom: 6px;
-  z-index: 1000;
-  font-size: 11px;
+  position: static;
+  display:block;
+  text-align:right;
+  margin:8px 8px 4px auto;
+    font-size: 11px;
   line-height: 1.2;
   color: #64748b;
   background: rgba(255, 255, 255, 0.75);
