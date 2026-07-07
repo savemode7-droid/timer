@@ -69,6 +69,7 @@
           itemId: l.itemId || null,
           item2Id: l.item2Id || null,
           customName: l.customName || "",
+          title: l.title || l.heading || "",
           itemName: l.itemName || "未分類",
           start, end,
           date: l.date || dateKey(new Date(start)),
@@ -174,33 +175,40 @@
     function item2ById(id) { return (state.item2s || []).find(i=>i.id===id); }
     function logById(id) { return state.logs.find(l=>l.id===id); }
 
-    function buildItemName(panel, items = state.items, item2s = state.item2s || []) {
-      const item1 = items.find(i=>i.id===panel.itemId);
-      const item2 = item2s.find(i=>i.id===panel.item2Id);
-      const part1 = item1 ? item1.name : "";
-      const part2 = item2 ? item2.name : "";
-      const free = (panel.customName || "").trim();
-      // v39.5 Step2.2: 正式な記録名は「項目1＋項目2＋手入力」をスペースなしで結合する。
-      const name = `${part1}${part2}${free}`;
-      return name || "未分類";
+    function buildItemParts(itemId, item2Id, customName, items = state.items, item2s = state.item2s || []) {
+      const item1 = items.find(i => i.id === itemId);
+      const item2 = item2s.find(i => i.id === item2Id);
+      return {
+        item1Name: item1 ? item1.name : "",
+        item2Name: item2 ? item2.name : "",
+        customName: (customName || "").trim()
+      };
     }
-
-
 
     function panelDisplayTitle(panel) {
       const title = (panel.title || "").trim();
       return title || "作業";
     }
 
-    function buildLogItemName(itemId, customName, item2Id = null, items = state.items, item2s = state.item2s || []) {
-      const item1 = items.find(i => i.id === itemId);
-      const item2 = item2s.find(i => i.id === item2Id);
-      const part1 = item1 ? item1.name : "";
-      const part2 = item2 ? item2.name : "";
+    function buildInfoText(title, item1Name, item2Name, customName) {
+      const heading = (title || "").trim();
+      const part1 = (item1Name || "").trim();
+      const part2 = (item2Name || "").trim();
       const free = (customName || "").trim();
-      // v39.5 Step2.2: 記録名は「項目1＋項目2＋手入力」。記録編集でも項目2を編集できる。
-      const name = `${part1}${part2}${free}`;
+      const name = `${heading}${part1}${part2}${free}`;
       return name || "未分類";
+    }
+
+    function buildItemName(panel, items = state.items, item2s = state.item2s || []) {
+      const parts = buildItemParts(panel.itemId, panel.item2Id, panel.customName, items, item2s);
+      // v40.2 Step3.1: 情報は「見出し＋項目1＋項目2＋手入力」を空白なしで結合して表示する。
+      // 内部では見出し・項目1・項目2・手入力を別々に保存する。
+      return buildInfoText(panelDisplayTitle(panel), parts.item1Name, parts.item2Name, parts.customName);
+    }
+
+    function buildLogItemName(itemId, customName, item2Id = null, items = state.items, item2s = state.item2s || [], title = "") {
+      const parts = buildItemParts(itemId, item2Id, customName, items, item2s);
+      return buildInfoText(title, parts.item1Name, parts.item2Name, parts.customName);
     }
 
     function recalcLog(log) {
@@ -563,7 +571,7 @@ function renderItemManageList() {
       const itemId = $("editLogItemId").value || null;
       const item2Id = $("editLogItem2Id").value || null;
       const customName = $("editLogCustomName").value.trim();
-      const itemName = buildLogItemName(itemId, customName, item2Id);
+      const itemName = buildLogItemName(itemId, customName, item2Id, state.items, state.item2s || [], log.title || "");
       const startIso = dateTimeLocalToIso($("editLogStart").value);
       const endIso = dateTimeLocalToIso($("editLogEnd").value);
 
@@ -677,12 +685,13 @@ function renderItemManageList() {
         deviceId: DEVICE_ID,
         updatedAt: end,
         panelId: null,
+        title: panelDisplayTitle(panel),
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
         customName: panel.customName || "",
-        // v39.5 Step4: 見出し(panel.title)はパネル専用ラベル。
-        // 記録名は正式データ「項目1＋項目2＋手入力」だけから作成する。
-        itemName: ((panel.title||"") + buildItemName(panel)),
+        // v40.2 Step3.1: 記録には見出し・項目1・項目2・手入力を別々に保存し、
+        // 表示用の情報は「見出し＋項目1＋項目2＋手入力」で作成する。
+        itemName: buildItemName(panel),
         start,
         end,
         date: dateKey(new Date(start)),
@@ -703,10 +712,11 @@ function renderItemManageList() {
         deviceId: DEVICE_ID,
         updatedAt: endDate.toISOString(),
         panelId: null,
+        title: panelDisplayTitle(panel),
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
         customName: panel.customName || "",
-        itemName: ((panel.title||"") + buildItemName(panel)),
+        itemName: buildItemName(panel),
         start: startDate.toISOString(),
         end: endDate.toISOString(),
         date: dateKey(startDate),
