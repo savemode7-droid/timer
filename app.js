@@ -1,4 +1,4 @@
-// Timer App app.js v40.2 Step1.3
+// Timer App app.js v40.2 Step2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
@@ -122,6 +122,50 @@
     function renderDeviceId() {
       const el = $("deviceIdDisplay");
       if (el) el.textContent = `D: ${DEVICE_ID}`;
+    }
+
+
+    function migrateLegacyLogs() {
+      if (!Array.isArray(state.logs)) return 0;
+      let updatedCount = 0;
+      const usedRecordIds = new Set(state.logs.map(l => l.recordId).filter(Boolean));
+
+      state.logs.forEach(log => {
+        if (!log) return;
+        let changed = false;
+        const wasLegacy = !log.recordId || !log.deviceId || !log.updatedAt;
+
+        if (!log.deviceId) {
+          log.deviceId = DEVICE_ID;
+          changed = true;
+        }
+
+        if (!log.recordId) {
+          let baseId = createRecordId(log.start || log.end || nowIso());
+          let newId = baseId;
+          let suffix = 1;
+          while (usedRecordIds.has(newId)) {
+            suffix += 1;
+            newId = `${baseId}-${suffix}`;
+          }
+          log.recordId = newId;
+          log.id = newId;
+          usedRecordIds.add(newId);
+          changed = true;
+        } else {
+          usedRecordIds.add(log.recordId);
+        }
+
+        if (!log.updatedAt) {
+          log.updatedAt = log.end || log.start || nowIso();
+          changed = true;
+        }
+
+        if (wasLegacy && changed) updatedCount += 1;
+      });
+
+      if (updatedCount > 0) saveState();
+      return updatedCount;
     }
 
     function sortedItems() { return [...state.items].sort((a,b)=>(a.kana||a.name).localeCompare((b.kana||b.name),"ja")); }
@@ -938,8 +982,12 @@ function renderItemManageList() {
       // dateFilter は今日、monthFilter は renderMonthFilter() 内で当月が選択される。
       const today = dateKey();
       if ($("dateFilter")) $("dateFilter").value = today;
+      const migratedCount = migrateLegacyLogs();
       renderAll();
       if ($("monthFilter")) $("monthFilter").value = monthKey();
+      if (migratedCount > 0) {
+        alert(`古い記録を${migratedCount}件更新しました。\n\nrecordId\ndeviceId\nupdatedAt\n\nを追加しました。`);
+      }
     }
 
     initializeApp();
