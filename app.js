@@ -1,6 +1,7 @@
-// Timer App app.js v40.0 Step1
+// Timer App app.js v40.1 Step1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
+    const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
     const $ = (id) => document.getElementById(id);
 
@@ -17,6 +18,19 @@
     function durationText(ms) { const t=Math.max(0,Math.floor(ms/1000)); const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60; return `${pad(h)}:${pad(m)}:${pad(s)}`; }
     function durationJa(ms) { const totalMin=Math.round(ms/60000); const h=Math.floor(totalMin/60), m=totalMin%60; if(h&&m) return `${h}時間${m}分`; if(h) return `${h}時間`; return `${m}分`; }
     function nowIso() { return new Date().toISOString(); }
+    function timestampIdPart(d = new Date()) {
+      return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}${String(d.getMilliseconds()).padStart(3, "0")}`;
+    }
+    function getDeviceId() {
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        id = `D-${timestampIdPart()}`;
+        localStorage.setItem(DEVICE_ID_KEY, id);
+      }
+      return id;
+    }
+
+    const DEVICE_ID = getDeviceId();
 
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
@@ -29,7 +43,7 @@
         if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-      return { items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false } };
+      return { deviceId: DEVICE_ID, items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false } };
     }
 
     function normalizeState(s) {
@@ -81,7 +95,7 @@
       }
       if (!panels.length) panels = [newPanel()];
 
-      const normalized = { items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false, ...(s.panelGroups || {}) } };
+      const normalized = { deviceId: s.deviceId || DEVICE_ID, items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false, ...(s.panelGroups || {}) } };
       ensureLogLinks(normalized);
       return normalized;
     }
@@ -92,6 +106,7 @@
     }
 
     function saveState() {
+      state.deviceId = DEVICE_ID;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
