@@ -1389,3 +1389,19 @@ button.complete-btn:disabled {
     grid-template-columns: 1fr 1fr 1fr;
   }
 }
+
+
+/* v40.1 Step1.1: Device ID display */
+.device-id-display {
+  position: fixed;
+  right: 8px;
+  bottom: 6px;
+  z-index: 1000;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.75);
+  padding: 2px 5px;
+  border-radius: 6px;
+  pointer-events: none;
+}

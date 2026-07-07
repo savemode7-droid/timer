@@ -1,9 +1,11 @@
-// Timer App app.js v40.1 Step1
+// Timer App app.js v40.1 Step1.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
     const $ = (id) => document.getElementById(id);
+
+    const DEVICE_ID = getDeviceId();
 
     let state = loadState();
     let activeItemManageType = "item1";
@@ -29,8 +31,6 @@
       }
       return id;
     }
-
-    const DEVICE_ID = getDeviceId();
 
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
@@ -108,6 +108,11 @@
     function saveState() {
       state.deviceId = DEVICE_ID;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function renderDeviceId() {
+      const el = $("deviceIdDisplay");
+      if (el) el.textContent = `D: ${DEVICE_ID}`;
     }
 
     function sortedItems() { return [...state.items].sort((a,b)=>(a.kana||a.name).localeCompare((b.kana||b.name),"ja")); }
@@ -421,7 +426,7 @@ function renderItemManageList() {
         : `<div class="empty">この日の記録はありません。</div>`;
     }
 
-    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); updateSectionCollapse(); }
+    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); updateSectionCollapse(); renderDeviceId(); }
 
     function addPanel(shouldRender=true) {
       // v39.3.2: 「作業パネルの追加」で作成したパネルは、折りたたみ状態で追加し、追加位置まで自動スクロールする。
