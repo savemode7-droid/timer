@@ -1,4 +1,4 @@
-// Timer App app.js v40.2 Step2
+// Timer App app.js v40.2 Step3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
@@ -822,7 +822,7 @@ function renderItemManageList() {
       }
 
       // v39.6: 完了ボタンでは記録だけ登録し、作業パネルは残す。
-      // 項目1・項目2・手入力・見出しは維持して、次回も同じパネルを再利用できるようにする。
+      // 見出しは維持し、項目1・項目2・手入力はクリアして再利用する。
       const log = createLogFromPanel(panel, panel.end);
       panel.lastLogId = log ? log.id : null;
       panel.start = null;
@@ -830,6 +830,9 @@ function renderItemManageList() {
       panel.running = false;
       panel.completed = false;
       panel.activeLogId = null;
+      panel.itemId = null;
+      panel.item2Id = null;
+      panel.customName = "";
       saveState(); renderAll();
     }
 
