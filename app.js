@@ -1,4 +1,4 @@
-// Timer App app.js v40.1 Step1.1
+// Timer App app.js v40.2 Step1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
@@ -32,6 +32,12 @@
       return id;
     }
 
+    function createRecordId(startIso) {
+      const startDate = startIso ? new Date(startIso) : new Date();
+      const safeDate = Number.isNaN(startDate.getTime()) ? new Date() : startDate;
+      return `${DEVICE_ID}-${timestampIdPart(safeDate)}`;
+    }
+
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
       return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, timerMinutes:0, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
@@ -55,7 +61,10 @@
         const end = l.end || start;
         const durationMs = Math.max(0, new Date(end).getTime() - new Date(start).getTime());
         return {
-          id: l.id || crypto.randomUUID(),
+          id: l.id || l.recordId || crypto.randomUUID(),
+          recordId: l.recordId || null,
+          deviceId: l.deviceId || null,
+          updatedAt: l.updatedAt || null,
           panelId: null,
           itemId: l.itemId || null,
           item2Id: l.item2Id || null,
@@ -533,6 +542,7 @@ function renderItemManageList() {
       log.itemName = itemName;
       log.start = startIso;
       log.end = endIso;
+      log.updatedAt = nowIso();
       recalcLog(log);
       saveState();
       $("logEditDialog").close();
@@ -616,8 +626,12 @@ function renderItemManageList() {
       if (!panel || !panel.start) return null;
       const start = panel.start;
       const end = endIso || panel.end || nowIso();
+      const recordId = createRecordId(start);
       const log = {
-        id: crypto.randomUUID(),
+        id: recordId,
+        recordId,
+        deviceId: DEVICE_ID,
+        updatedAt: end,
         panelId: null,
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
@@ -638,8 +652,12 @@ function renderItemManageList() {
     function createTimerLogFromPanel(panel, startIso, minutes) {
       const startDate = new Date(startIso);
       const endDate = new Date(startDate.getTime() + Number(minutes) * 60000);
+      const recordId = createRecordId(startDate.toISOString());
       const log = {
-        id: crypto.randomUUID(),
+        id: recordId,
+        recordId,
+        deviceId: DEVICE_ID,
+        updatedAt: endDate.toISOString(),
         panelId: null,
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
