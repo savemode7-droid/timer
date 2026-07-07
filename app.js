@@ -682,7 +682,7 @@ function renderItemManageList() {
         customName: panel.customName || "",
         // v39.5 Step4: 見出し(panel.title)はパネル専用ラベル。
         // 記録名は正式データ「項目1＋項目2＋手入力」だけから作成する。
-        itemName: buildItemName(panel),
+        itemName: ((panel.title||"") + buildItemName(panel)),
         start,
         end,
         date: dateKey(new Date(start)),
@@ -706,7 +706,7 @@ function renderItemManageList() {
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
         customName: panel.customName || "",
-        itemName: buildItemName(panel),
+        itemName: ((panel.title||"") + buildItemName(panel)),
         start: startDate.toISOString(),
         end: endDate.toISOString(),
         date: dateKey(startDate),
