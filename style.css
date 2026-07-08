@@ -89,7 +89,7 @@
       font-size: 34px;
       font-weight: 900;
       font-variant-numeric: tabular-nums;
-      text-align: left;
+      text-align: center;
       margin: 16px 0;
     }
     .time-edit {
@@ -123,7 +123,7 @@
     }
     th { color: var(--muted); font-weight: 700; }
     .right { text-align: right; }
-    .empty { color: var(--muted); text-align: left; padding: 18px 4px; }
+    .empty { color: var(--muted); text-align: center; padding: 18px 4px; }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .inline-add {
       margin-top: 10px;
@@ -750,7 +750,7 @@
   border: 1px solid #cbd5e1;
   border-radius: 9px;
   padding: 6px 5px;
-  text-align: left;
+  text-align: center;
 }
 .done-label {
   display: block;
@@ -771,7 +771,7 @@
 
 /* v29: total only summary */
 .total-summary {
-  text-align: left;
+  text-align: center;
   font-size: 22px;
   font-weight: 900;
   color: #1e40af;
@@ -934,7 +934,7 @@
   border-right: 0;
 }
 .log-action-cell {
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
 }
 .log-icon-btn {
@@ -1138,7 +1138,7 @@ button.complete-btn:disabled {
 .panel-group-empty {
   color: #64748b;
   font-size: 11px;
-  text-align: left;
+  text-align: center;
   padding: 9px 3px;
 }
 .template-panel {
@@ -1359,7 +1359,7 @@ button.complete-btn:disabled {
 .section-toggle-mark {
   display: inline-block;
   width: 1.1em;
-  text-align: left;
+  text-align: center;
   font-weight: 900;
 }
 .collapsible-section.collapsed .collapsible-section-body {
@@ -1409,3 +1409,19 @@ button.complete-btn:disabled {
 .version-block{display:flex;flex-direction:column;align-items:flex-end}
 .version-block .app-version{font-size:.9rem;color:#94a3b8}
 .version-block .device-id-display{margin:2px 0 0 0;font-size:10px;color:#94a3b8;position:static}
+
+/* v40.2 Step3.2: work panel title left aligned */
+.panel-head.panel-head-clickable {
+  justify-content: flex-start !important;
+}
+.panel-head.panel-head-clickable .panel-title {
+  flex: 1 1 auto;
+  text-align: left !important;
+}
+.panel-head.panel-head-clickable .panel-title-inline-input {
+  flex: 1 1 auto;
+}
+.panel-head.panel-head-clickable .panel-delete-btn {
+  margin-left: auto;
+}
+
