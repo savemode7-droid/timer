@@ -201,7 +201,7 @@
 
     function buildItemName(panel, items = state.items, item2s = state.item2s || []) {
       const parts = buildItemParts(panel.itemId, panel.item2Id, panel.customName, items, item2s);
-      // v40.2 Step3.1: 情報は「見出し＋項目1＋項目2＋手入力」を空白なしで結合して表示する。
+      // v40.2 Step3.2: 情報は「見出し＋項目1＋項目2＋手入力」を空白なしで結合して表示する。
       // 内部では見出し・項目1・項目2・手入力を別々に保存する。
       return buildInfoText(panelDisplayTitle(panel), parts.item1Name, parts.item2Name, parts.customName);
     }
@@ -689,7 +689,7 @@ function renderItemManageList() {
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
         customName: panel.customName || "",
-        // v40.2 Step3.1: 記録には見出し・項目1・項目2・手入力を別々に保存し、
+        // v40.2 Step3.2: 記録には見出し・項目1・項目2・手入力を別々に保存し、
         // 表示用の情報は「見出し＋項目1＋項目2＋手入力」で作成する。
         itemName: buildItemName(panel),
         start,
