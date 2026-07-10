@@ -1425,3 +1425,6 @@ button.complete-btn:disabled {
   margin-left: auto;
 }
 
+
+
+.panel-title{margin-left:10px;display:inline-block;}
