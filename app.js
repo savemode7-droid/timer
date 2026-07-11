@@ -1,4 +1,4 @@
-// Timer App app.js v40.2 Step3.2
+// Timer App app.js v40.2 Step3.4
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
@@ -357,7 +357,7 @@
         return `
           <div class="timer-panel ${completed ? "completed" : ""} ${panelCollapsed ? "collapsed" : ""} ${extraClass}" data-panel-id="${panel.id}">
             <div class="panel-head panel-head-clickable" data-panel-head-toggle="${panel.id}">
-              <span class="panel-toggle-mark">${collapseMark}</span>
+              <span class="panel-toggle-mark" data-toggle-panel="${panel.id}" role="button" aria-label="パネルを開閉" title="パネルを開閉">${collapseMark}</span>
               ${titleNode}
               <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}" type="button">削除</button>
@@ -945,6 +945,13 @@ function renderItemManageList() {
     document.body.addEventListener("click", e => {
       if (e.target.closest("[data-panel-title-input]")) {
         e.stopPropagation();
+        return;
+      }
+
+      const panelToggleTarget = e.target.closest("[data-toggle-panel]");
+      if (panelToggleTarget) {
+        e.stopPropagation();
+        togglePanel(panelToggleTarget.dataset.togglePanel);
         return;
       }
 
