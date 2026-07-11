@@ -1,7 +1,7 @@
 <!--
 ==================================================
 作業タイマー
-Version : v40.2 Step3.5-toggle-hit-area
+Version : v40.2 Step4.1-json-export
 Base    : v38.5 step1 actual
 Date    : 2026-07-05
 
@@ -18,13 +18,13 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=40.2-step3-4-toggle-hit-area">
+  <link rel="stylesheet" href="style.css?v=40.2-step4-1-json-export">
 </head>
 <body>
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <div class="version-block"><div class="app-version">v40.2 Step3.4</div><div id="deviceIdDisplay" class="device-id-display">D: </div></div>
+      <div class="version-block"><div class="app-version">v40.2 Step4.1</div><div id="deviceIdDisplay" class="device-id-display">D: </div></div>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -71,6 +71,9 @@ Changes
         </div>
         <div class="export-button-row">
           <button class="export-main" id="monthCsvBtn">出力</button>
+        </div>
+        <div class="export-button-row">
+          <button class="secondary" id="jsonExportBtn">JSONバックアップ</button>
         </div>
         <div class="delete-row">
           <button class="delete-subtle" id="clearMonthBtn">選択月削除</button>
@@ -136,5 +139,5 @@ Changes
     </div>
   </dialog>
 
-  <script src="app.js?v=40.2-step3-4-toggle-hit-area"></script>
+  <script src="app.js?v=40.2-step4-1-json-export"></script>
 </html>

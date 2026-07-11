@@ -1,8 +1,10 @@
-// Timer App app.js v40.2 Step3.4
+// Timer App app.js v40.2 Step4.1
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
+    const APP_VERSION = "v40.2 Step4.1";
+    const DATA_FORMAT_VERSION = 1;
     const $ = (id) => document.getElementById(id);
 
     const DEVICE_ID = getDeviceId();
@@ -892,6 +894,30 @@ function renderItemManageList() {
       const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
     }
     function exportMonthCsv() { const target=$("monthFilter")?.value||monthKey(); const fmt=$("exportFormat")?.value||"csv"; const logs=currentLogsForCalc().filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target); fmt==="excel" ? exportExcelFile(logs,`作業タイマー記録_${target}.xls`) : exportCsvFile(logs,`作業タイマー記録_${target}.csv`); }
+    function exportJsonBackup() {
+      saveState();
+      const exportedAt = nowIso();
+      const backup = {
+        backupType: "work-timer-full-backup",
+        dataFormatVersion: DATA_FORMAT_VERSION,
+        appVersion: APP_VERSION,
+        exportedAt,
+        deviceId: DEVICE_ID,
+        storageKey: STORAGE_KEY,
+        data: JSON.parse(JSON.stringify(state))
+      };
+      const json = JSON.stringify(backup, null, 2);
+      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = exportedAt.slice(0, 10).replaceAll("-", "");
+      a.href = url;
+      a.download = `作業タイマー_バックアップ_${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
     function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); saveState(); renderAll(); }
 
     function openItemDialog(type) {
@@ -914,6 +940,7 @@ function renderItemManageList() {
     $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); renderSummary(); });
     $("dateFilter").addEventListener("change", () => { renderLogs(); renderSummary(); });
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
+    $("jsonExportBtn").addEventListener("click", exportJsonBackup);
     $("clearMonthBtn").addEventListener("click", clearMonthLogs);
     $("monthFilter").addEventListener("change", () => saveState());
 
