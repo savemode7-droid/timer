@@ -315,7 +315,9 @@
         const canComplete = !!panel.end && !running && !completed;
         const startEndButton = running
           ? `<button class="end-btn" data-stop="${panel.id}">終了</button>`
-          : `<button class="start-btn" data-start="${panel.id}">開始</button>`;
+          : (panel.start && panel.end
+              ? `<button class="secondary reset-btn" data-reset-panel="${panel.id}">リセット</button>`
+              : `<button class="start-btn" data-start="${panel.id}">開始</button>`);
         const actionControls = completed ? `` : `
             <div class="main-actions timer-action-row">
               <select class="timer-select" data-timer-panel="${panel.id}" ${running ? "disabled" : ""}>${timerOptions(panel.timerMinutes)}</select>
@@ -361,7 +363,7 @@
             <div class="panel-head panel-head-clickable" data-panel-head-toggle="${panel.id}">
               <span class="panel-toggle-mark" data-toggle-panel="${panel.id}" role="button" aria-label="パネルを開閉" title="パネルを開閉">${collapseMark}</span>
               ${titleNode}
-              <span class="small">${running ? "計測中" : completed ? "完了" : "未開始"}</span>
+              <span class="small">${running ? "計測中" : (panel.start && panel.end) ? "終了済み" : completed ? "完了" : "未開始"}</span>
               <button class="danger panel-delete-btn" data-delete-panel="${panel.id}" type="button">削除</button>
             </div>
 
@@ -825,6 +827,22 @@ function renderItemManageList() {
       saveState(); renderAll();
     }
 
+    function resetPanel(id) {
+      const panel = state.panels.find(p=>p.id===id);
+      if (!panel || panel.running) return;
+
+      // Step4.2.2: リセットは記録を保存せず、開始・終了時刻だけを消す。
+      // 見出し・項目1・項目2・手入力・パネルの開閉状態は維持する。
+      panel.start = null;
+      panel.end = null;
+      panel.running = false;
+      panel.completed = false;
+      panel.activeLogId = null;
+      panel.lastLogId = null;
+      panel.collapsed = false;
+      saveState(); renderAll();
+    }
+
     function completePanel(id) {
       const panel = state.panels.find(p=>p.id===id);
       if (!panel || panel.running) return;
@@ -833,8 +851,8 @@ function renderItemManageList() {
         return;
       }
 
-      // v39.6: 完了ボタンでは記録だけ登録し、作業パネルは残す。
-      // 見出しは維持し、項目1・項目2・手入力はクリアして再利用する。
+      // Step4.2.2: 完了時は記録を保存し、時間だけリセットする。
+      // 見出し・項目1・項目2・手入力は保持し、パネルも折りたたまない。
       const log = createLogFromPanel(panel, panel.end);
       panel.lastLogId = log ? log.id : null;
       panel.start = null;
@@ -842,10 +860,7 @@ function renderItemManageList() {
       panel.running = false;
       panel.completed = false;
       panel.activeLogId = null;
-      panel.itemId = null;
-      panel.item2Id = null;
-      panel.customName = "";
-      panel.collapsed = true;
+      panel.collapsed = false;
       saveState(); renderAll();
     }
 
@@ -1085,6 +1100,7 @@ function renderItemManageList() {
 
         if(button.dataset.start) { startPanel(button.dataset.start); return; }
         if(button.dataset.stop) { stopPanel(button.dataset.stop); return; }
+        if(button.dataset.resetPanel) { resetPanel(button.dataset.resetPanel); return; }
         if(button.dataset.completePanel) { completePanel(button.dataset.completePanel); return; }
         if(button.dataset.deletePanel) { deletePanel(button.dataset.deletePanel); return; }
         if(button.dataset.editLog) { editLog(button.dataset.editLog); return; }
