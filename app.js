@@ -1,9 +1,9 @@
-// Timer App app.js v40.2 Step4.1
+// Timer App app.js v40.2 Step4.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step4.1";
+    const APP_VERSION = "v40.2 Step4.2";
     const DATA_FORMAT_VERSION = 1;
     const $ = (id) => document.getElementById(id);
 
@@ -918,6 +918,83 @@ function renderItemManageList() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 0);
     }
+    function formatImportDate(value) {
+      if (!value) return "不明";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function validateJsonBackup(backup) {
+      if (!backup || typeof backup !== "object" || Array.isArray(backup)) {
+        throw new Error("JSONバックアップの形式ではありません。");
+      }
+      if (backup.backupType !== "work-timer-full-backup") {
+        throw new Error("作業タイマーのバックアップファイルではありません。");
+      }
+      const formatVersion = Number(backup.dataFormatVersion);
+      if (!Number.isInteger(formatVersion) || formatVersion < 1) {
+        throw new Error("データ形式のバージョンを確認できません。");
+      }
+      if (formatVersion > DATA_FORMAT_VERSION) {
+        throw new Error(`このバックアップは新しいデータ形式（${formatVersion}）です。\nアプリを更新してから復元してください。`);
+      }
+      if (!backup.data || typeof backup.data !== "object" || Array.isArray(backup.data)) {
+        throw new Error("バックアップ内に復元データがありません。");
+      }
+      if (!Array.isArray(backup.data.logs) || !Array.isArray(backup.data.panels)) {
+        throw new Error("記録または作業パネルのデータが壊れています。");
+      }
+      return formatVersion;
+    }
+
+    async function importJsonBackupFile(file) {
+      if (!file) return;
+      try {
+        const text = await file.text();
+        let backup;
+        try {
+          backup = JSON.parse(text);
+        } catch {
+          throw new Error("JSONファイルを読み取れませんでした。ファイルが壊れていないか確認してください。");
+        }
+
+        const formatVersion = validateJsonBackup(backup);
+        const logCount = backup.data.logs.length;
+        const panelCount = backup.data.panels.length;
+        const exportedAt = formatImportDate(backup.exportedAt);
+        const sourceVersion = backup.appVersion || "不明";
+        const message = [
+          "現在のデータを、このバックアップの内容で置き換えます。",
+          "この操作は元に戻せません。必要なら先にJSONバックアップを保存してください。",
+          "",
+          `バックアップ作成日時：${exportedAt}`,
+          `アプリバージョン：${sourceVersion}`,
+          `データ形式：${formatVersion}`,
+          `記録：${logCount}件`,
+          `作業パネル：${panelCount}件`,
+          "",
+          "復元しますか？"
+        ].join("\n");
+        if (!confirm(message)) return;
+
+        const restored = normalizeState(JSON.parse(JSON.stringify(backup.data)));
+        restored.deviceId = DEVICE_ID;
+        state = restored;
+        saveState();
+        renderAll();
+        if ($("dateFilter")) $("dateFilter").value = state.currentDate || dateKey();
+        if ($("monthFilter")) $("monthFilter").value = monthKey();
+        alert(`JSONバックアップを復元しました。\n記録：${state.logs.length}件\n作業パネル：${state.panels.length}件`);
+      } catch (error) {
+        console.error(error);
+        alert(`JSONバックアップを復元できませんでした。\n\n${error?.message || "不明なエラー"}`);
+      } finally {
+        const input = $("jsonImportFile");
+        if (input) input.value = "";
+      }
+    }
+
     function clearMonthLogs() { const target=$("monthFilter")?.value||monthKey(); if(!confirm(`${monthLabel(target)} の記録をすべて削除します。\nこの操作は元に戻せません。\n本当に削除しますか？`)) return; const removeIds=new Set(state.logs.filter(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)===target).map(l=>l.id)); state.logs=state.logs.filter(l=>!removeIds.has(l.id)); saveState(); renderAll(); }
 
     function openItemDialog(type) {
@@ -941,6 +1018,8 @@ function renderItemManageList() {
     $("dateFilter").addEventListener("change", () => { renderLogs(); renderSummary(); });
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
     $("jsonExportBtn").addEventListener("click", exportJsonBackup);
+    $("jsonImportBtn").addEventListener("click", () => $("jsonImportFile").click());
+    $("jsonImportFile").addEventListener("change", e => importJsonBackupFile(e.target.files?.[0]));
     $("clearMonthBtn").addEventListener("click", clearMonthLogs);
     $("monthFilter").addEventListener("change", () => saveState());
 

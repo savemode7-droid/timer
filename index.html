@@ -1,7 +1,7 @@
 <!--
 ==================================================
 作業タイマー
-Version : v40.2 Step4.1-json-export
+Version : v40.2 Step4.2-json-import
 Base    : v38.5 step1 actual
 Date    : 2026-07-05
 
@@ -24,7 +24,7 @@ Changes
   <header>
     <div class="title-row">
       <h1>作業タイマー</h1>
-      <div class="version-block"><div class="app-version">v40.2 Step4.1</div><div id="deviceIdDisplay" class="device-id-display">D: </div></div>
+      <div class="version-block"><div class="app-version">v40.2 Step4.2</div><div id="deviceIdDisplay" class="device-id-display">D: </div></div>
     </div>
     <div class="sub">開始・終了時刻はパネル内で手入力修正できます。修正内容は一覧とCSVにも反映されます。</div>
   </header>
@@ -74,6 +74,8 @@ Changes
         </div>
         <div class="export-button-row">
           <button class="secondary" id="jsonExportBtn">JSONバックアップ</button>
+          <button class="secondary" id="jsonImportBtn">JSON復元</button>
+          <input id="jsonImportFile" type="file" accept="application/json,.json" hidden>
         </div>
         <div class="delete-row">
           <button class="delete-subtle" id="clearMonthBtn">選択月削除</button>
