@@ -843,6 +843,7 @@ function renderItemManageList() {
       panel.itemId = null;
       panel.item2Id = null;
       panel.customName = "";
+      panel.collapsed = true;
       saveState(); renderAll();
     }
 
