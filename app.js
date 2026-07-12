@@ -1,11 +1,12 @@
-// Timer App app.js v40.2 Step4.2.4
+// Timer App app.js v40.2 Step4.3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step4.2.4";
+    const APP_VERSION = "v40.2 Step4.3";
     const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
-    const DATA_FORMAT_VERSION = 1;
+    const DATA_FORMAT_VERSION = 2;
+    let lastMigrationSummary = "未実行";
     const $ = (id) => document.getElementById(id);
 
     const DEVICE_ID = getDeviceId();
@@ -53,7 +54,7 @@
         if (!raw) continue;
         try { return normalizeState(JSON.parse(raw)); } catch {}
       }
-      return { deviceId: DEVICE_ID, items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false } };
+      return { dataFormatVersion: DATA_FORMAT_VERSION, deviceId: DEVICE_ID, items:[], item2s:[], panels:[newPanel()], logs:[], currentDate:dateKey(), panelGroups:{ workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false } };
     }
 
     function normalizeState(s) {
@@ -109,7 +110,7 @@
       }
       if (!panels.length) panels = [newPanel()];
 
-      const normalized = { deviceId: s.deviceId || DEVICE_ID, items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false, ...(s.panelGroups || {}) } };
+      const normalized = { dataFormatVersion: DATA_FORMAT_VERSION, deviceId: s.deviceId || DEVICE_ID, items, item2s, panels, logs, currentDate: s.currentDate || dateKey(), panelGroups: { workCollapsed:false, templateCollapsed:false, completedCollapsed:true, logsCollapsed:false, summaryCollapsed:false, exportCollapsed:false, ...(s.panelGroups || {}) } };
       ensureLogLinks(normalized);
       return normalized;
     }
@@ -121,6 +122,7 @@
 
     function saveState() {
       state.deviceId = DEVICE_ID;
+      state.dataFormatVersion = DATA_FORMAT_VERSION;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
@@ -145,6 +147,8 @@
       if ($("developerLogCount")) $("developerLogCount").textContent = `${state.logs.length}件`;
       if ($("developerPanelCount")) $("developerPanelCount").textContent = `${state.panels.length}件`;
       if ($("developerStorageKey")) $("developerStorageKey").textContent = STORAGE_KEY;
+      if ($("developerConverterVersion")) $("developerConverterVersion").textContent = `v1 → v${DATA_FORMAT_VERSION}`;
+      if ($("developerMigrationStatus")) $("developerMigrationStatus").textContent = lastMigrationSummary;
     }
 
     function toggleDeveloperMode() {
@@ -161,6 +165,8 @@
         `Logs: ${state.logs.length}`,
         `Panels: ${state.panels.length}`,
         `Storage Key: ${STORAGE_KEY}`,
+        `Converter: v1 -> v${DATA_FORMAT_VERSION}`,
+        `Last Migration: ${lastMigrationSummary}`,
         `User Agent: ${navigator.userAgent}`
       ].join("\n");
       try {
@@ -992,6 +998,87 @@ function renderItemManageList() {
       return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+    function cloneJson(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function migrateDataV1ToV2(sourceData, sourceDeviceId) {
+      const data = cloneJson(sourceData);
+      data.items = Array.isArray(data.items) ? data.items : [];
+      data.item2s = Array.isArray(data.item2s) ? data.item2s : [];
+      data.panels = Array.isArray(data.panels) ? data.panels : [];
+      data.logs = Array.isArray(data.logs) ? data.logs : [];
+      data.panelGroups = {
+        workCollapsed: false,
+        templateCollapsed: false,
+        completedCollapsed: true,
+        logsCollapsed: false,
+        summaryCollapsed: false,
+        exportCollapsed: false,
+        ...(data.panelGroups || {})
+      };
+
+      const fallbackDeviceId = sourceDeviceId || data.deviceId || DEVICE_ID;
+      const usedRecordIds = new Set();
+      data.logs = data.logs.map((log, index) => {
+        const migrated = { ...(log || {}) };
+        const start = migrated.start || migrated.end || nowIso();
+        const end = migrated.end || start;
+        migrated.title = migrated.title || migrated.heading || "";
+        migrated.customName = migrated.customName || "";
+        migrated.itemId = migrated.itemId || null;
+        migrated.item2Id = migrated.item2Id || null;
+        migrated.deviceId = migrated.deviceId || fallbackDeviceId;
+        let recordId = migrated.recordId || migrated.id || `${migrated.deviceId}-${timestampIdPart(new Date(start))}`;
+        const baseRecordId = recordId;
+        let suffix = 1;
+        while (usedRecordIds.has(recordId)) {
+          suffix += 1;
+          recordId = `${baseRecordId}-${suffix}`;
+        }
+        usedRecordIds.add(recordId);
+        migrated.recordId = recordId;
+        migrated.id = recordId;
+        migrated.updatedAt = migrated.updatedAt || end || start;
+        migrated.start = start;
+        migrated.end = end;
+        migrated.date = migrated.date || dateKey(new Date(start));
+        migrated.completed = !!migrated.completed;
+        delete migrated.heading;
+        return migrated;
+      });
+
+      data.panels = data.panels.map(panel => ({
+        ...(panel || {}),
+        id: panel?.id || crypto.randomUUID(),
+        title: panel?.title || "",
+        itemId: panel?.itemId || null,
+        item2Id: panel?.item2Id || null,
+        customName: panel?.customName || "",
+        collapsed: !!panel?.collapsed,
+        running: !!panel?.running
+      }));
+      data.dataFormatVersion = 2;
+      return data;
+    }
+
+    function convertBackupData(sourceData, fromVersion, sourceDeviceId) {
+      let version = fromVersion;
+      let data = cloneJson(sourceData);
+      const steps = [];
+      while (version < DATA_FORMAT_VERSION) {
+        if (version === 1) {
+          data = migrateDataV1ToV2(data, sourceDeviceId);
+          steps.push("v1 → v2");
+          version = 2;
+          continue;
+        }
+        throw new Error(`データ形式 v${version} からの変換処理がありません。`);
+      }
+      data.dataFormatVersion = DATA_FORMAT_VERSION;
+      return { data, fromVersion, toVersion: version, steps };
+    }
+
     function validateJsonBackup(backup) {
       if (!backup || typeof backup !== "object" || Array.isArray(backup)) {
         throw new Error("JSONバックアップの形式ではありません。");
@@ -1031,13 +1118,14 @@ function renderItemManageList() {
         const panelCount = backup.data.panels.length;
         const exportedAt = formatImportDate(backup.exportedAt);
         const sourceVersion = backup.appVersion || "不明";
+        const conversionText = formatVersion < DATA_FORMAT_VERSION ? `v${formatVersion} → v${DATA_FORMAT_VERSION}へ自動変換` : "変換不要";
         const message = [
           "現在のデータを、このバックアップの内容で置き換えます。",
           "この操作は元に戻せません。必要なら先にJSONバックアップを保存してください。",
           "",
           `バックアップ作成日時：${exportedAt}`,
           `アプリバージョン：${sourceVersion}`,
-          `データ形式：${formatVersion}`,
+          `データ形式：${formatVersion}（${conversionText}）`,
           `記録：${logCount}件`,
           `作業パネル：${panelCount}件`,
           "",
@@ -1045,14 +1133,16 @@ function renderItemManageList() {
         ].join("\n");
         if (!confirm(message)) return;
 
-        const restored = normalizeState(JSON.parse(JSON.stringify(backup.data)));
+        const conversion = convertBackupData(backup.data, formatVersion, backup.deviceId);
+        lastMigrationSummary = conversion.steps.length ? `${conversion.steps.join(", ")} 完了` : "変換不要";
+        const restored = normalizeState(conversion.data);
         restored.deviceId = DEVICE_ID;
         state = restored;
         saveState();
         renderAll();
         if ($("dateFilter")) $("dateFilter").value = state.currentDate || dateKey();
         if ($("monthFilter")) $("monthFilter").value = monthKey();
-        alert(`JSONバックアップを復元しました。\n記録：${state.logs.length}件\n作業パネル：${state.panels.length}件`);
+        alert(`JSONバックアップを復元しました。\n変換：${lastMigrationSummary}\n記録：${state.logs.length}件\n作業パネル：${state.panels.length}件`);
       } catch (error) {
         console.error(error);
         alert(`JSONバックアップを復元できませんでした。\n\n${error?.message || "不明なエラー"}`);
