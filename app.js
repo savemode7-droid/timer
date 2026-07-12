@@ -1,9 +1,9 @@
-// Timer App app.js v40.2 Step4.2
+// Timer App app.js v40.2 Step4.2.3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step4.2.1";
+    const APP_VERSION = "v40.2 Step4.2.3";
     const DATA_FORMAT_VERSION = 1;
     const $ = (id) => document.getElementById(id);
 
@@ -536,12 +536,15 @@ function renderItemManageList() {
       if (!log) return;
 
       const dialog = $("logEditDialog");
+      const titleInput = $("editLogTitle");
       const itemSelect = $("editLogItemId");
       const item2Select = $("editLogItem2Id");
       const customInput = $("editLogCustomName");
       const startInput = $("editLogStart");
       const endInput = $("editLogEnd");
       const saveBtn = $("saveLogEditBtn");
+
+      titleInput.value = (log.title || "").trim();
 
       const items = sortedItems();
       const item2s = sortedItem2s();
@@ -572,15 +575,16 @@ function renderItemManageList() {
       const log = state.logs.find(l => l.id === id);
       if (!log) return;
 
+      const title = $("editLogTitle").value.trim();
       const itemId = $("editLogItemId").value || null;
       const item2Id = $("editLogItem2Id").value || null;
       const customName = $("editLogCustomName").value.trim();
-      const itemName = buildLogItemName(itemId, customName, item2Id, state.items, state.item2s || [], log.title || "");
+      const itemName = buildLogItemName(itemId, customName, item2Id, state.items, state.item2s || [], title);
       const startIso = dateTimeLocalToIso($("editLogStart").value);
       const endIso = dateTimeLocalToIso($("editLogEnd").value);
 
-      if (!itemId && !item2Id && !customName) {
-        alert("項目1・項目2を選択するか、手入力を入力してください。");
+      if (!title && !itemId && !item2Id && !customName) {
+        alert("見出し・項目1・項目2のいずれかを入力するか、手入力を入力してください。");
         return;
       }
       if (!startIso || !endIso) {
@@ -592,6 +596,7 @@ function renderItemManageList() {
         return;
       }
 
+      log.title = title;
       log.itemId = itemId;
       log.item2Id = item2Id;
       log.customName = customName;
