@@ -1,9 +1,10 @@
-// Timer App app.js v40.2 Step4.2.3
+// Timer App app.js v40.2 Step4.2.4
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step4.2.3";
+    const APP_VERSION = "v40.2 Step4.2.4";
+    const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
     const DATA_FORMAT_VERSION = 1;
     const $ = (id) => document.getElementById(id);
 
@@ -11,6 +12,7 @@
 
     let state = loadState();
     let activeItemManageType = "item1";
+    let developerModeEnabled = localStorage.getItem(DEVELOPER_MODE_KEY) === "true";
 
     function pad(n) { return String(n).padStart(2, "0"); }
     function dateKey(d = new Date()) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
@@ -125,6 +127,48 @@
     function renderDeviceId() {
       const el = $("deviceIdDisplay");
       if (el) el.textContent = `D: ${DEVICE_ID}`;
+    }
+
+    function renderDeveloperMode() {
+      document.body.classList.toggle("developer-mode-enabled", developerModeEnabled);
+      const button = $("developerModeBtn");
+      if (button) {
+        button.setAttribute("aria-pressed", String(developerModeEnabled));
+        button.textContent = developerModeEnabled ? "開発者モード ON" : "開発者モード";
+      }
+      const panel = $("developerPanel");
+      if (panel) panel.setAttribute("aria-hidden", String(!developerModeEnabled));
+      if (!developerModeEnabled) return;
+      if ($("developerAppVersion")) $("developerAppVersion").textContent = APP_VERSION;
+      if ($("developerDataVersion")) $("developerDataVersion").textContent = String(DATA_FORMAT_VERSION);
+      if ($("developerDeviceId")) $("developerDeviceId").textContent = DEVICE_ID;
+      if ($("developerLogCount")) $("developerLogCount").textContent = `${state.logs.length}件`;
+      if ($("developerPanelCount")) $("developerPanelCount").textContent = `${state.panels.length}件`;
+      if ($("developerStorageKey")) $("developerStorageKey").textContent = STORAGE_KEY;
+    }
+
+    function toggleDeveloperMode() {
+      developerModeEnabled = !developerModeEnabled;
+      localStorage.setItem(DEVELOPER_MODE_KEY, String(developerModeEnabled));
+      renderAll();
+    }
+
+    async function copyDeveloperInfo() {
+      const info = [
+        `App Version: ${APP_VERSION}`,
+        `Data Format Version: ${DATA_FORMAT_VERSION}`,
+        `Device ID: ${DEVICE_ID}`,
+        `Logs: ${state.logs.length}`,
+        `Panels: ${state.panels.length}`,
+        `Storage Key: ${STORAGE_KEY}`,
+        `User Agent: ${navigator.userAgent}`
+      ].join("\n");
+      try {
+        await navigator.clipboard.writeText(info);
+        if ($("developerStatus")) $("developerStatus").textContent = "開発情報をコピーしました。";
+      } catch {
+        if ($("developerStatus")) $("developerStatus").textContent = "コピーできませんでした。";
+      }
     }
 
 
@@ -485,13 +529,16 @@ function renderItemManageList() {
             const action = `
               <button class="log-icon-btn edit-log" data-edit-log="${l.id}" title="この記録を編集">✎</button>
               <button class="log-icon-btn delete-log" data-delete-log="${l.id}" title="この記録を削除">🗑</button>`;
-            return `<tr><td>${escapeHtml(l.itemName)}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationText(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
+            const developerDetails = developerModeEnabled
+              ? `<div class="log-developer-details">Record ID: ${escapeHtml(l.recordId || "-")}<br>Device ID: ${escapeHtml(l.deviceId || "-")}<br>UpdatedAt: ${escapeHtml(l.updatedAt || "-")}</div>`
+              : "";
+            return `<tr><td>${escapeHtml(l.itemName)}${developerDetails}</td><td>${timeText(l.start)}</td><td>${timeText(l.end)}</td><td class="right">${durationText(l.durationMs)}</td><td class="log-action-cell">${action}</td></tr>`;
           }).join("") +
           `</tbody></table>`
         : `<div class="empty">この日の記録はありません。</div>`;
     }
 
-    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); updateSectionCollapse(); renderDeviceId(); }
+    function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); updateSectionCollapse(); renderDeviceId(); renderDeveloperMode(); }
 
     function addPanel(shouldRender=true) {
       // v39.3.2: 「作業パネルの追加」で作成したパネルは、折りたたみ状態で追加し、追加位置まで自動スクロールする。
@@ -1042,6 +1089,8 @@ function renderItemManageList() {
     $("jsonImportFile").addEventListener("change", e => importJsonBackupFile(e.target.files?.[0]));
     $("clearMonthBtn").addEventListener("click", clearMonthLogs);
     $("monthFilter").addEventListener("change", () => saveState());
+    $("developerModeBtn").addEventListener("click", toggleDeveloperMode);
+    $("copyDeveloperInfoBtn").addEventListener("click", copyDeveloperInfo);
 
     document.body.addEventListener("change", e => {
       const el=e.target;
