@@ -927,8 +927,9 @@ function renderItemManageList() {
         return;
       }
 
-      // Step4.2.2: 完了時は記録を保存し、時間だけリセットする。
-      // 見出し・項目1・項目2・手入力は保持し、パネルも折りたたまない。
+      // Step5.1.1: 完了時は記録を保存し、時間だけリセットする。
+      // 見出し・項目1・項目2・手入力は保持する。
+      // 完了したパネルは折りたたみ、作業パネル一覧の一番下へ移動する。
       const log = createLogFromPanel(panel, panel.end);
       panel.lastLogId = log ? log.id : null;
       panel.start = null;
@@ -936,7 +937,11 @@ function renderItemManageList() {
       panel.running = false;
       panel.completed = false;
       panel.activeLogId = null;
-      panel.collapsed = false;
+      panel.collapsed = true;
+
+      state.panels = state.panels.filter(p => p.id !== panel.id);
+      state.panels.push(panel);
+
       saveState(); renderAll();
     }
 
