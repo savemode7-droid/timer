@@ -1,9 +1,9 @@
-// Timer App app.js v40.2 Step5.1
+// Timer App app.js v40.2 Step5.1.2
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step5.1";
+    const APP_VERSION = "v40.2 Step5.1.2";
     const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
     const DATA_FORMAT_VERSION = 2;
     let lastMigrationSummary = "未実行";
@@ -841,8 +841,8 @@ function renderItemManageList() {
       const now = nowIso();
       const timerMinutes = Number(panel.timerMinutes || 0);
 
-      // Step5.1: タイマーが指定されている場合は、開始時点で予定終了時刻までの記録を即登録する。
-      // 使用したパネルは削除せず、入力内容とタイマー設定を空にして一覧の一番下へ移動する。
+      // Step5.1.2: タイマーが指定されている場合は、開始時点で予定終了時刻までの記録を即登録する。
+      // 使用したパネルは削除せず、入力内容とタイマー設定を空にし、折りたたんで一覧の一番下へ移動する。
       // 例: 13:00に10分を指定して開始 → 13:00-13:10の記録を登録し、空のパネルとして末尾へ戻す。
       if (timerMinutes > 0) {
         createTimerLogFromPanel(panel, now, timerMinutes);
@@ -860,6 +860,7 @@ function renderItemManageList() {
         panel.activeLogId = null;
         panel.lastLogId = null;
         panel.date = dateKey();
+        panel.collapsed = true;
 
         // 配列の末尾へ移動する。startがnullになるため、表示順でも一番下に残る。
         state.panels = state.panels.filter(p => p.id !== panel.id);
