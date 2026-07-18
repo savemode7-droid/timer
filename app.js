@@ -1,9 +1,9 @@
-// Timer App app.js v40.2 Step5.1.3
+// Timer App app.js v40.2 Step5.1.4
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step5.1.3";
+    const APP_VERSION = "v40.2 Step5.1.4";
     const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
     const DATA_FORMAT_VERSION = 2;
     let lastMigrationSummary = "未実行";
@@ -242,7 +242,7 @@
       return title || "作業";
     }
 
-    // Step5.1.3: デフォルト見出し「作業」は記録上では空欄として扱う。
+    // Step5.1.4: デフォルト見出し「作業」は記録上では空欄として扱う。
     function normalizeRecordTitle(title) {
       const heading = (title || "").trim();
       return heading === "作業" ? "" : heading;
