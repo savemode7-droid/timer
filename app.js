@@ -1,9 +1,9 @@
-// Timer App app.js v40.2 Step5.1.2
+// Timer App app.js v40.2 Step5.1.3
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step5.1.2";
+    const APP_VERSION = "v40.2 Step5.1.3";
     const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
     const DATA_FORMAT_VERSION = 2;
     let lastMigrationSummary = "未実行";
@@ -242,13 +242,18 @@
       return title || "作業";
     }
 
-    function buildInfoText(title, item1Name, item2Name, customName) {
+    // Step5.1.3: デフォルト見出し「作業」は記録上では空欄として扱う。
+    function normalizeRecordTitle(title) {
       const heading = (title || "").trim();
+      return heading === "作業" ? "" : heading;
+    }
+
+    function buildInfoText(title, item1Name, item2Name, customName) {
+      const heading = normalizeRecordTitle(title);
       const part1 = (item1Name || "").trim();
       const part2 = (item2Name || "").trim();
       const free = (customName || "").trim();
-      const name = `${heading}${part1}${part2}${free}`;
-      return name || "未分類";
+      return `${heading}${part1}${part2}${free}`;
     }
 
     function buildItemName(panel, items = state.items, item2s = state.item2s || []) {
@@ -597,7 +602,7 @@ function renderItemManageList() {
       const endInput = $("editLogEnd");
       const saveBtn = $("saveLogEditBtn");
 
-      titleInput.value = (log.title || "").trim();
+      titleInput.value = normalizeRecordTitle(log.title);
 
       const items = sortedItems();
       const item2s = sortedItem2s();
@@ -628,7 +633,7 @@ function renderItemManageList() {
       const log = state.logs.find(l => l.id === id);
       if (!log) return;
 
-      const title = $("editLogTitle").value.trim();
+      const title = normalizeRecordTitle($("editLogTitle").value);
       const itemId = $("editLogItemId").value || null;
       const item2Id = $("editLogItem2Id").value || null;
       const customName = $("editLogCustomName").value.trim();
@@ -747,7 +752,7 @@ function renderItemManageList() {
         deviceId: DEVICE_ID,
         updatedAt: end,
         panelId: null,
-        title: panelDisplayTitle(panel),
+        title: normalizeRecordTitle(panelDisplayTitle(panel)),
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
         customName: panel.customName || "",
@@ -774,7 +779,7 @@ function renderItemManageList() {
         deviceId: DEVICE_ID,
         updatedAt: endDate.toISOString(),
         panelId: null,
-        title: panelDisplayTitle(panel),
+        title: normalizeRecordTitle(panelDisplayTitle(panel)),
         itemId: panel.itemId || null,
         item2Id: panel.item2Id || null,
         customName: panel.customName || "",
