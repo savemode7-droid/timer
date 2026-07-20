@@ -986,7 +986,7 @@ function renderItemManageList() {
 
     function exportCsvFile(logs, filename) {
       const rows = [["日付","項目","開始時間","終了時間","分","recordId","deviceId","updatedAt"]];
-      logs.sort((a,b)=>new Date(a.start)-new Date(b.start)).forEach(l=>rows.push([l.date,l.itemName,timeText(l.start),timeText(l.end),Math.round(l.durationMs/60000),l.recordId||"",l.deviceId||"",l.updatedAt||""]));
+      logs.sort((a,b)=>new Date(a.start)-new Date(b.start)).forEach(l=>rows.push([l.date,l.itemName,formatTimeHHMM(l.start),formatTimeHHMM(l.end),Math.round(l.durationMs/60000),l.recordId||"",l.deviceId||"",l.updatedAt||""]));
       const csv = rows.map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
       const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"});
       const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
