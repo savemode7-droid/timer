@@ -1,9 +1,9 @@
-// Timer App app.js v40.2 Step5.1.4
+// Timer App app.js v40.2 Step5.1.6
 
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step5.1.4";
+    const APP_VERSION = "v40.2 Step5.1.6";
     const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
     const DATA_FORMAT_VERSION = 2;
     let lastMigrationSummary = "未実行";
@@ -20,7 +20,7 @@
     function monthKey(d = new Date()) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
     function monthLabel(key) { const [y, m] = key.split("-"); return `${Number(y)}年${Number(m)}月`; }
     function timeText(iso) { if (!iso) return ""; const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
-    // Step5.1.4: 記録・合計などの一覧表示専用。保存データとCSV/JSONは秒を保持する。
+    // Step5.1.4: 記録・合計などの一覧表示専用。保存データとJSONは秒を保持する。
     function formatTimeHHMM(iso) { if (!iso) return ""; const d = new Date(iso); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
     function timeOnlyValue(iso) { return timeText(iso); }
     function escapeHtml(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"}[c])); }
@@ -850,12 +850,13 @@ function renderItemManageList() {
       const timerMinutes = Number(panel.timerMinutes || 0);
 
       // Step5.1.2: タイマーが指定されている場合は、開始時点で予定終了時刻までの記録を即登録する。
-      // 使用したパネルは削除せず、入力内容とタイマー設定を空にし、折りたたんで一覧の一番下へ移動する。
-      // 例: 13:00に10分を指定して開始 → 13:00-13:10の記録を登録し、空のパネルとして末尾へ戻す。
+      // Step5.1.6: 使用したパネルは削除せず、見出しを維持する。
+      // 項目1・項目2・手入力・タイマー設定だけを空にし、折りたたんで一覧の一番下へ移動する。
+      // 例: 見出し「メール対応」は残し、個別の項目だけを消して再利用できる状態に戻す。
       if (timerMinutes > 0) {
         createTimerLogFromPanel(panel, now, timerMinutes);
 
-        panel.title = "";
+        // Step5.1.6: タイマー実行後も見出しは維持する。
         panel.editingTitle = false;
         panel.itemId = null;
         panel.item2Id = null;
