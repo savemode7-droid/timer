@@ -3,9 +3,7 @@
     const STORAGE_KEY = "work_timer_panel_app_v5";
     const DEVICE_ID_KEY = "work_timer_device_id";
     const OLD_KEYS = ["work_timer_panel_app_v4", "work_timer_panel_app_v3", "work_timer_panel_app_v2", "work_timer_app_v1"];
-    const APP_VERSION = "v40.2 Step5.1.6";
     const DEVELOPER_MODE_KEY = "work_timer_developer_mode";
-    const DATA_FORMAT_VERSION = 2;
     let lastMigrationSummary = "未実行";
     const $ = (id) => document.getElementById(id);
 
