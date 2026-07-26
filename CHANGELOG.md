@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v40.2 Step6.0.6B
+
+- `createLogFromPanel()`、`updateLogFromPanel()`、`changePanelItem()`、`changePanelItem2()`、`changeCustomName()`、`changePanelTimer()`、`resetPanel()`、`completePanel()`を`app.js`から`js/panel.js`へ移動。
+- パネルの項目変更、手入力変更、タイマー値変更、リセット、完了処理を`panel.js`へ集約。
+- パネルから記録を作成・更新する処理も`panel.js`へ集約。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.6Bへ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.6A
 
 - `js/panel.js`を追加。

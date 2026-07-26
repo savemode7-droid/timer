@@ -87,3 +87,111 @@
       saveState();
       renderAll();
     }
+
+    function createLogFromPanel(panel, endIso) {
+      if (!panel || !panel.start) return null;
+      const start = panel.start;
+      const end = endIso || panel.end || nowIso();
+      const recordId = createRecordId(start);
+      const log = {
+        id: recordId,
+        recordId,
+        deviceId: DEVICE_ID,
+        updatedAt: end,
+        panelId: null,
+        title: normalizeRecordTitle(panelDisplayTitle(panel)),
+        itemId: panel.itemId || null,
+        item2Id: panel.item2Id || null,
+        customName: panel.customName || "",
+        // v40.2 Step3.1: 記録には見出し・項目1・項目2・手入力を別々に保存し、
+        // 表示用の情報は「見出し＋項目1＋項目2＋手入力」で作成する。
+        itemName: buildItemName(panel),
+        start,
+        end,
+        date: dateKey(new Date(start)),
+        durationMs: Math.max(0, new Date(end).getTime() - new Date(start).getTime()),
+        completed: true
+      };
+      state.logs.push(log);
+      return log;
+    }
+
+    function updateLogFromPanel(panel) {
+      // v39.0 Step4.1:
+      // 開始時には記録を作成しない。
+      // 終了時に createLogFromPanel() で初めて記録へ追加する。
+    }
+
+    function changePanelItem(panelId, itemId) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.itemId = itemId || null;
+      updateLogFromPanel(panel);
+      saveState(); renderAll();
+    }
+
+    function changePanelItem2(panelId, item2Id) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.item2Id = item2Id || null;
+      updateLogFromPanel(panel);
+      saveState(); renderAll();
+    }
+
+    function changeCustomName(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.customName = value || "";
+      updateLogFromPanel(panel);
+      saveState();
+      // v28: 入力中にパネル全体を再描画すると、1文字ごとにフォーカスが外れるため、
+      // パネルは描き直さず、集計と記録一覧だけ更新する。
+      renderSummary();
+      renderMonthFilter();
+      renderLogs();
+    }
+
+    function changePanelTimer(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
+      panel.timerMinutes = Math.max(0, Number(value || 0));
+      saveState();
+    }
+
+    function resetPanel(id) {
+      const panel = state.panels.find(p=>p.id===id);
+      if (!panel || panel.running) return;
+
+      // Step4.2.2: リセットは記録を保存せず、開始・終了時刻だけを消す。
+      // 見出し・項目1・項目2・手入力・パネルの開閉状態は維持する。
+      panel.start = null;
+      panel.end = null;
+      panel.running = false;
+      panel.completed = false;
+      panel.activeLogId = null;
+      panel.lastLogId = null;
+      panel.collapsed = false;
+      saveState(); renderAll();
+    }
+
+    function completePanel(id) {
+      const panel = state.panels.find(p=>p.id===id);
+      if (!panel || panel.running) return;
+      if (!panel.start || !panel.end) {
+        alert("終了してから完了してください。");
+        return;
+      }
+
+      // Step5.1.1: 完了時は記録を保存し、時間だけリセットする。
+      // 見出し・項目1・項目2・手入力は保持する。
+      // 完了したパネルは折りたたみ、作業パネル一覧の一番下へ移動する。
+      const log = createLogFromPanel(panel, panel.end);
+      panel.lastLogId = log ? log.id : null;
+      panel.start = null;
+      panel.end = null;
+      panel.running = false;
+      panel.completed = false;
+      panel.activeLogId = null;
+      panel.collapsed = true;
+
+      state.panels = state.panels.filter(p => p.id !== panel.id);
+      state.panels.push(panel);
+
+      saveState(); renderAll();
+    }
