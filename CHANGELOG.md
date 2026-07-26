@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v40.2 Step6.0.4B
+
+- `renderPanels()`、`renderSummary()`、`renderLogs()`、`renderAll()`を`app.js`から`js/render.js`へ移動。
+- Step6.0.4Aで移動済みの4関数と合わせ、主要な画面描画処理を`render.js`へ集約。
+- `index.html`のキャッシュ識別子をStep6.0.4Bへ更新。
+- アプリ内バージョンを`v40.2 Step6.0.4B`へ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.4A
 
 - `js/render.js` を追加。
