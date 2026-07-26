@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v40.2 Step6.0.7B
+
+- `exportCsvFile()`、`escapeExcelCell()`、`exportExcelFile()`、`exportMonthCsv()`、`clearMonthLogs()`を`app.js`から`logs.js`へ移動。
+- 記録のCSV／Excel出力と月別一括削除処理を`logs.js`へ集約。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.7Bへ更新。
+- JavaScript構文、スクリプト読み込み順、ZIP内容の整合性を確認。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.7A
 
 - `js/logs.js`を追加。
