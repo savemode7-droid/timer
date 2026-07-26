@@ -6,6 +6,7 @@
  * 固定設定値: js/constants.js
  * 汎用処理: js/utils.js
  * 保存・読込処理: js/storage.js
+ * 一部の画面描画処理: js/render.js
  * 更新履歴: CHANGELOG.md
  */
 
@@ -34,31 +35,6 @@
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
       return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, timerMinutes:0, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
-    }
-
-                    function renderDeviceId() {
-      const el = $("deviceIdDisplay");
-      if (el) el.textContent = `D: ${DEVICE_ID}`;
-    }
-
-    function renderDeveloperMode() {
-      document.body.classList.toggle("developer-mode-enabled", developerModeEnabled);
-      const button = $("developerModeBtn");
-      if (button) {
-        button.setAttribute("aria-pressed", String(developerModeEnabled));
-        button.textContent = developerModeEnabled ? "開発者モード ON" : "開発者モード";
-      }
-      const panel = $("developerPanel");
-      if (panel) panel.setAttribute("aria-hidden", String(!developerModeEnabled));
-      if (!developerModeEnabled) return;
-      if ($("developerAppVersion")) $("developerAppVersion").textContent = APP_VERSION;
-      if ($("developerDataVersion")) $("developerDataVersion").textContent = String(DATA_FORMAT_VERSION);
-      if ($("developerDeviceId")) $("developerDeviceId").textContent = DEVICE_ID;
-      if ($("developerLogCount")) $("developerLogCount").textContent = `${state.logs.length}件`;
-      if ($("developerPanelCount")) $("developerPanelCount").textContent = `${state.panels.length}件`;
-      if ($("developerStorageKey")) $("developerStorageKey").textContent = STORAGE_KEY;
-      if ($("developerConverterVersion")) $("developerConverterVersion").textContent = `v1 → v${DATA_FORMAT_VERSION}`;
-      if ($("developerMigrationStatus")) $("developerMigrationStatus").textContent = lastMigrationSummary;
     }
 
     function toggleDeveloperMode() {
@@ -313,33 +289,6 @@
         groupHtml("work", "作業", workPanels, state.panelGroups.workCollapsed, () => "");
     }
 
-function renderItemManageList() {
-      const area = $("itemManageList");
-      const title = $("itemDialogTitle");
-      const isItem2 = activeItemManageType === "item2";
-
-      const item1Section = document.querySelector("#newItemName")?.closest(".item-manage-section");
-      const item2Section = document.querySelector("#newItem2Name")?.closest(".item-manage-section");
-      if (item1Section) item1Section.style.display = isItem2 ? "none" : "";
-      if (item2Section) item2Section.style.display = isItem2 ? "" : "none";
-      if (title) title.textContent = isItem2 ? "項目2管理" : "項目1管理";
-
-      const items = isItem2 ? sortedItem2s() : sortedItems();
-      const editAttr = isItem2 ? "data-edit-item2" : "data-edit-item";
-      const deleteAttr = isItem2 ? "data-delete-item2" : "data-delete-item";
-      const label = isItem2 ? "項目2" : "項目1";
-      const emptyText = `${label}はまだありません。`;
-      area.innerHTML = `
-        <div class="item-manage-section">
-          <div class="item-manage-heading">${escapeHtml(label)}一覧</div>
-          ${items.length ? items.map(item => `
-            <div class="item-card">
-              <div class="item-line"><span class="item-name">${escapeHtml(item.name)}</span><span class="item-kana">${escapeHtml(item.kana)}</span></div>
-              <div class="item-actions"><button class="ghost mini-btn" ${editAttr}="${item.id}">編集</button><button class="danger mini-btn" ${deleteAttr}="${item.id}">削除</button></div>
-            </div>`).join("") : `<div class="empty">${escapeHtml(emptyText)}</div>`}
-        </div>`;
-    }
-
     function currentLogsForCalc() {
       ensureLogLinks();
       return state.logs.map(l => {
@@ -386,16 +335,6 @@ function renderItemManageList() {
           <span class="summary-cell-label">今週</span><span class="summary-cell-value">${formatDurationHHMM(weekTotal)}</span>
           <span class="summary-cell-label">今月</span><span class="summary-cell-value">${formatDurationHHMM(monthTotal)}</span>
         </div>`;
-    }
-
-    function renderMonthFilter() {
-      const select = $("monthFilter");
-      const months = [...new Set(state.logs.map(l=>(l.date||dateKey(new Date(l.start))).slice(0,7)))].filter(Boolean).sort();
-      const current = select.value || monthKey();
-      if (!months.includes(monthKey())) months.push(monthKey());
-      months.sort();
-      select.innerHTML = months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join("");
-      select.value = months.includes(current) ? current : monthKey();
     }
 
     function renderLogs() {

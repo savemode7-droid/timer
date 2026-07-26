@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v40.2 Step6.0.4A
+
+- `js/render.js` を追加。
+- `renderDeviceId()`、`renderDeveloperMode()`、`renderItemManageList()`、`renderMonthFilter()` を `app.js` から分離。
+- `renderPanels()`、`renderSummary()`、`renderLogs()`、`renderAll()` は次段階のため `app.js` に残置。
+- 読み込み順を `version.js` → `constants.js` → `utils.js` → `storage.js` → `render.js` → `app.js` に変更。
+- アプリ内バージョンとキャッシュ用ファイルバージョンを Step6.0.4A に更新。
+- 機能変更なし。
+
 ## v40.2 Step6.0.3
 
 - `js/storage.js` を追加。
