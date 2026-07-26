@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v40.2 Step6.0.3
+
+- `js/storage.js` を追加。
+- 保存・読込、状態の正規化、旧データ移行、ログ編集保存などの処理を `app.js` から分離。
+- 読み込み順を `version.js` → `constants.js` → `utils.js` → `storage.js` → `app.js` に変更。
+- アプリ内バージョン表示とキャッシュ用ファイルバージョンを Step6.0.3 に更新。
+- Step6.0.3初回ZIPで欠けていた `storage.js` の読み込み指定を修正。
+- 機能変更なし。
+
 ## v40.2 Step6.0.2
 
 - `js/utils.js` を追加。

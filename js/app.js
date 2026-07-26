@@ -5,6 +5,7 @@
  * バージョン情報: js/version.js
  * 固定設定値: js/constants.js
  * 汎用処理: js/utils.js
+ * 保存・読込処理: js/storage.js
  * 更新履歴: CHANGELOG.md
  */
 
