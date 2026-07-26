@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v40.2 Step6.0.5A
+
+- `js/timer.js`を追加。
+- `startPanel()`と`stopPanel()`を`app.js`から`timer.js`へ移動。
+- 毎秒の経過時間更新処理を`tickTimers()`として分離。
+- タイマー更新開始処理を`startTimerTicker()`として分離。
+- 読み込み順を`render.js` → `timer.js` → `app.js`に変更。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.5Aへ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.4B
 
 - `renderPanels()`、`renderSummary()`、`renderLogs()`、`renderAll()`を`app.js`から`js/render.js`へ移動。
