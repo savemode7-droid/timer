@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v40.2 Step6.0.6A
+
+- `js/panel.js`を追加。
+- `newPanel()`、`sortedPanelsForDisplay()`、`addPanel()`、`deletePanel()`、`togglePanel()`、`togglePanelGroup()`、`editPanelTitle()`、`cancelPanelTitleEdit()`を`app.js`から`panel.js`へ移動。
+- パネルの生成・表示順・追加・削除・折りたたみ・見出し編集に関する基本処理を分離。
+- 読み込み順を`timer.js` → `panel.js` → `app.js`に変更。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.6Aへ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.5B
 
 - `finalizeIfDateChanged()`を`app.js`から`js/timer.js`へ移動。
