@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v40.2 Step6.0.8
+
+- `js/items.js`を追加。
+- 項目1・項目2の参照、並び替え、表示名生成、追加・編集・削除、管理ダイアログ表示処理を`app.js`から`items.js`へ移動。
+- `activeItemManageType`を項目管理モジュールへ移動し、`app.js`を初期化・イベント登録・バックアップ・画面全体制御中心に整理。
+- 読み込み順を`storage.js` → `items.js` → `render.js`へ変更。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.8へ更新。
+- JavaScript構文、読み込み順、関数重複、参照ファイル、ZIP内容の整合性を確認。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.7B
 
 - `exportCsvFile()`、`escapeExcelCell()`、`exportExcelFile()`、`exportMonthCsv()`、`clearMonthLogs()`を`app.js`から`logs.js`へ移動。
