@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v40.2 Step6.0.2
+
+- `js/utils.js` を追加。
+- DOM要素取得、日付・時刻キー生成、時刻・所要時間表示、HTMLエスケープなどの汎用関数を `app.js` から分離。
+- `app.js` には端末ID取得以降のアプリ固有処理を残した。
+- 読み込み順を `version.js` → `constants.js` → `utils.js` → `app.js` に変更。
+- アプリ内バージョン表示とキャッシュ用ファイルバージョンを Step6.0.2 に更新。
+- 機能変更なし。
+
 ## v40.2 Step6.0.1
 
 - `js/constants.js` を追加。
