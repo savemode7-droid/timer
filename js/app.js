@@ -145,27 +145,6 @@
       return d.toISOString();
     }
 
-    function finalizeIfDateChanged() {
-      const today = dateKey();
-      if (state.currentDate === today) return false;
-
-      // v39.6: 作業パネルは削除ボタンを押した時だけ消える。
-      // 日付が変わってもパネルは残す。計測中だったパネルだけ旧日の23:59:59で停止する。
-      const oldDate = state.currentDate || today;
-      const [y,m,d] = oldDate.split("-").map(Number);
-      const endOfOldDay = new Date(y, m-1, d, 23, 59, 59, 0).toISOString();
-      state.panels.forEach(panel => {
-        if (panel.running && panel.start) {
-          panel.end = endOfOldDay;
-          panel.running = false;
-          panel.completed = false;
-          panel.activeLogId = null;
-        }
-      });
-      state.currentDate = today;
-      saveState();
-      return true;
-    }
 
     function sortedPanelsForDisplay() {
       return [...state.panels].sort((a,b) => {
@@ -372,31 +351,6 @@
       return log;
     }
 
-    function createTimerLogFromPanel(panel, startIso, minutes) {
-      const startDate = new Date(startIso);
-      const endDate = new Date(startDate.getTime() + Number(minutes) * 60000);
-      const recordId = createRecordId(startDate.toISOString());
-      const log = {
-        id: recordId,
-        recordId,
-        deviceId: DEVICE_ID,
-        updatedAt: endDate.toISOString(),
-        panelId: null,
-        title: normalizeRecordTitle(panelDisplayTitle(panel)),
-        itemId: panel.itemId || null,
-        item2Id: panel.item2Id || null,
-        customName: panel.customName || "",
-        itemName: buildItemName(panel),
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        date: dateKey(startDate),
-        durationMs: Math.max(0, endDate.getTime() - startDate.getTime()),
-        completed: true,
-        timerMinutes: Number(minutes) || 0
-      };
-      state.logs.push(log);
-      return log;
-    }
 
     function updateLogFromPanel(panel) {
       // v39.0 Step4.1:
@@ -480,26 +434,6 @@
       saveState(); renderAll();
     }
 
-    function updatePanelTime(panelId, field, value) {
-      const panel = state.panels.find(p=>p.id===panelId); if (!panel || !panel.start) return;
-      const base = field === "start" ? panel.start : (panel.end || panel.start);
-      const iso = localTimeToIso(value, base); if (!iso) return;
-      if (field === "start") {
-        panel.start = iso;
-        panel.date = dateKey(new Date(iso));
-        if (!panel.end || new Date(panel.end) < new Date(panel.start)) panel.end = panel.start;
-      } else {
-        panel.end = iso;
-      }
-      const log = panel.activeLogId ? logById(panel.activeLogId) : null;
-      if (log) {
-        log.start = panel.start;
-        log.end = panel.end || panel.start;
-        log.date = dateKey(new Date(log.start));
-        recalcLog(log);
-      }
-      saveState(); renderAll();
-    }
 
     function createItem(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; state.items.push(item); return item; }
     function createItem2(name, kana) { const item={ id:crypto.randomUUID(), name:name.trim(), kana:kana.trim() }; if(!Array.isArray(state.item2s)) state.item2s=[]; state.item2s.push(item); return item; }

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v40.2 Step6.0.5B
+
+- `finalizeIfDateChanged()`を`app.js`から`js/timer.js`へ移動。
+- `createTimerLogFromPanel()`を`app.js`から`js/timer.js`へ移動。
+- `updatePanelTime()`を`app.js`から`js/timer.js`へ移動。
+- Step6.0.5Aの開始・終了・毎秒更新処理と合わせ、タイマー関連処理を`timer.js`へ集約。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.5Bへ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.5A
 
 - `js/timer.js`を追加。

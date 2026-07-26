@@ -1,5 +1,5 @@
 const VERSION = Object.freeze({
-  app: "v40.2 Step6.0.5A",
+  app: "v40.2 Step6.0.5B",
   data: 2
 });
 const APP_VERSION = VERSION.app;
