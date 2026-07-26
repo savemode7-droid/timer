@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v40.2 Step6.0.7A
+
+- `js/logs.js`を追加。
+- `logById()`、`buildLogItemName()`、`recalcLog()`、`localTimeToIso()`、`dateTimeLocalValue()`、`dateTimeLocalToIso()`、`currentLogsForCalc()`、`startOfWeekMonday()`、`deleteLog()`、`editLog()`を`app.js`から`logs.js`へ移動。
+- 記録の参照・編集・削除・再計算と、集計に使うログ抽出処理を分離。
+- 読み込み順を`panel.js` → `logs.js` → `app.js`に変更。
+- アプリ内バージョンとキャッシュ識別子をStep6.0.7Aへ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step6.0.6B
 
 - `createLogFromPanel()`、`updateLogFromPanel()`、`changePanelItem()`、`changePanelItem2()`、`changeCustomName()`、`changePanelTimer()`、`resetPanel()`、`completePanel()`を`app.js`から`js/panel.js`へ移動。
