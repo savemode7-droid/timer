@@ -14,7 +14,12 @@ const googleDriveState = {
   lastSaveMs: 0,
   lastSavedAt: "",
   lastError: "",
-  fileId: localStorage.getItem(GOOGLE_DRIVE_FILE_ID_KEY) || ""
+  fileId: localStorage.getItem(GOOGLE_DRIVE_FILE_ID_KEY) || "",
+  restoreStatus: "未実行",
+  restoreState: "idle",
+  lastRestoreMs: 0,
+  lastRestoredAt: "",
+  lastRestoreError: ""
 };
 
 function googleDriveStatusText() {
@@ -28,6 +33,17 @@ function googleDrivePerformanceText() {
   return googleDriveState.lastSaveMs ? `${googleDriveState.lastSaveMs.toFixed(2)}ms` : "未実行";
 }
 
+function googleDriveRestoreStatusText() {
+  if (googleDriveState.restoreState === "success" && googleDriveState.lastRestoredAt) {
+    return `復元済み（${formatGoogleDriveDate(googleDriveState.lastRestoredAt)}）`;
+  }
+  return googleDriveState.restoreStatus || "未実行";
+}
+
+function googleDriveRestorePerformanceText() {
+  return googleDriveState.lastRestoreMs ? `${googleDriveState.lastRestoreMs.toFixed(2)}ms` : "未実行";
+}
+
 function formatGoogleDriveDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "日時不明";
@@ -39,6 +55,9 @@ function renderGoogleDrive() {
   const button = $("googleDriveSaveBtn");
   const status = $("googleDriveStatus");
   const message = $("googleDriveMessage");
+  const restoreButton = $("googleDriveRestoreBtn");
+  const restoreStatus = $("googleDriveRestoreStatus");
+  const restoreMessage = $("googleDriveRestoreMessage");
 
   if (button) {
     button.disabled = !connected || googleDriveState.state === "saving";
@@ -49,8 +68,19 @@ function renderGoogleDrive() {
     status.dataset.state = googleDriveState.state;
   }
   if (message) message.textContent = googleDriveState.lastError || "";
+  if (restoreButton) {
+    restoreButton.disabled = !connected || googleDriveState.restoreState === "restoring";
+    restoreButton.textContent = googleDriveState.restoreState === "restoring" ? "復元中…" : "Driveから復元";
+  }
+  if (restoreStatus) {
+    restoreStatus.textContent = googleDriveRestoreStatusText();
+    restoreStatus.dataset.state = googleDriveState.restoreState;
+  }
+  if (restoreMessage) restoreMessage.textContent = googleDriveState.lastRestoreError || "";
   if ($("developerGoogleDriveStatus")) $("developerGoogleDriveStatus").textContent = googleDriveStatusText();
   if ($("developerGoogleDriveTime")) $("developerGoogleDriveTime").textContent = googleDrivePerformanceText();
+  if ($("developerGoogleDriveRestoreStatus")) $("developerGoogleDriveRestoreStatus").textContent = googleDriveRestoreStatusText();
+  if ($("developerGoogleDriveRestoreTime")) $("developerGoogleDriveRestoreTime").textContent = googleDriveRestorePerformanceText();
 }
 
 async function googleDriveFetch(url, options = {}) {
@@ -186,6 +216,96 @@ async function saveBackupToGoogleDrive() {
     googleDriveState.state = "error";
     googleDriveState.lastError = error?.message || "Google Driveへ保存できませんでした。";
     console.error("Google Drive save error", error);
+  } finally {
+    renderGoogleDrive();
+  }
+}
+
+
+async function fetchGoogleDriveBackup(fileId) {
+  const metadataResponse = await googleDriveFetch(`${GOOGLE_DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?fields=id,name,modifiedTime,size`);
+  const metadata = await metadataResponse.json();
+  const contentResponse = await googleDriveFetch(`${GOOGLE_DRIVE_API_BASE}/files/${encodeURIComponent(fileId)}?alt=media`);
+  const text = await contentResponse.text();
+  let backup;
+  try {
+    backup = JSON.parse(text);
+  } catch {
+    throw new Error("Google DriveのバックアップJSONを読み取れませんでした。ファイルが壊れている可能性があります。");
+  }
+  return { metadata, backup };
+}
+
+async function restoreBackupFromGoogleDrive() {
+  if (googleDriveState.restoreState === "restoring") return;
+  if (!isGoogleConnected()) {
+    googleDriveState.restoreStatus = "未接続";
+    googleDriveState.restoreState = "error";
+    googleDriveState.lastRestoreError = "先にGoogleへ接続してください。";
+    renderGoogleDrive();
+    return;
+  }
+
+  const startedAt = performance.now();
+  googleDriveState.restoreStatus = "読込中";
+  googleDriveState.restoreState = "restoring";
+  googleDriveState.lastRestoreError = "";
+  renderGoogleDrive();
+
+  try {
+    let fileId = await findGoogleDriveBackupFile();
+    if (!fileId) throw new Error(`Google Driveに「${GOOGLE_DRIVE_BACKUP_FILE_NAME}」が見つかりません。先にDriveへ保存してください。`);
+
+    let loaded;
+    try {
+      loaded = await fetchGoogleDriveBackup(fileId);
+    } catch (error) {
+      if (/HTTP 404/.test(error?.message || "")) {
+        localStorage.removeItem(GOOGLE_DRIVE_FILE_ID_KEY);
+        googleDriveState.fileId = "";
+        fileId = await findGoogleDriveBackupFile();
+        if (!fileId) throw new Error(`Google Driveに「${GOOGLE_DRIVE_BACKUP_FILE_NAME}」が見つかりません。`);
+        loaded = await fetchGoogleDriveBackup(fileId);
+      } else {
+        throw error;
+      }
+    }
+
+    const { metadata, backup } = loaded;
+    const formatVersion = validateJsonBackup(backup);
+    const message = [
+      "Google Driveのバックアップで現在のデータを置き換えます。",
+      "復元前に、現在のデータをJSONファイルとして自動退避します。",
+      "",
+      `バックアップ更新日時：${formatImportDate(metadata.modifiedTime || backup.exportedAt)}`,
+      `アプリバージョン：${backup.appVersion || "不明"}`,
+      `データ形式：${formatVersion}`,
+      `記録：${backup.data.logs.length}件`,
+      `作業パネル：${backup.data.panels.length}件`,
+      "",
+      "Driveから復元しますか？"
+    ].join("\n");
+    if (!confirm(message)) {
+      googleDriveState.restoreStatus = "キャンセル";
+      googleDriveState.restoreState = "idle";
+      return;
+    }
+
+    const result = restoreValidatedBackup(backup, "Google Drive", true);
+    googleDriveState.fileId = metadata.id || fileId;
+    localStorage.setItem(GOOGLE_DRIVE_FILE_ID_KEY, googleDriveState.fileId);
+    googleDriveState.lastRestoredAt = nowIso();
+    googleDriveState.lastRestoreMs = performance.now() - startedAt;
+    googleDriveState.restoreStatus = "復元済み";
+    googleDriveState.restoreState = "success";
+    googleDriveState.lastRestoreError = "";
+    alert(`Google Driveから復元しました。\n変換：${result.migration}\n記録：${result.logCount}件\n作業パネル：${result.panelCount}件`);
+  } catch (error) {
+    googleDriveState.lastRestoreMs = performance.now() - startedAt;
+    googleDriveState.restoreStatus = "復元失敗";
+    googleDriveState.restoreState = "error";
+    googleDriveState.lastRestoreError = error?.message || "Google Driveから復元できませんでした。";
+    console.error("Google Drive restore error", error);
   } finally {
     renderGoogleDrive();
   }

@@ -166,7 +166,8 @@
         `Startup Performance: ${startupPerformanceText()}`,
         `Loading Performance: ${loadingPerformanceText()}`,
         `Google Auth: ${googleAuthStatusText()} (${googleAuthPerformanceText()})`,
-        `Google Drive: ${googleDriveStatusText()} (${googleDrivePerformanceText()})`,
+        `Google Drive Save: ${googleDriveStatusText()} (${googleDrivePerformanceText()})`,
+        `Google Drive Restore: ${googleDriveRestoreStatusText()} (${googleDriveRestorePerformanceText()})`,
         `User Agent: ${navigator.userAgent}`
       ].join("\n");
       try {
@@ -229,20 +230,30 @@
       };
     }
 
-    function exportJsonBackup() {
-      const backup = createJsonBackupData();
-      const exportedAt = backup.exportedAt;
+    function downloadJsonBackupData(backup, filename) {
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], { type: "application/json;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const stamp = exportedAt.slice(0, 10).replaceAll("-", "");
       a.href = url;
-      a.download = `作業タイマー_バックアップ_${stamp}.json`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 0);
+    }
+
+    function exportJsonBackup() {
+      const backup = createJsonBackupData();
+      const stamp = backup.exportedAt.slice(0, 10).replaceAll("-", "");
+      downloadJsonBackupData(backup, `作業タイマー_バックアップ_${stamp}.json`);
+    }
+
+    function downloadPreRestoreBackup() {
+      const backup = createJsonBackupData();
+      const d = new Date(backup.exportedAt);
+      const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      downloadJsonBackupData(backup, `作業タイマー_復元前バックアップ_${stamp}.json`);
     }
     function formatImportDate(value) {
       if (!value) return "不明";
@@ -295,6 +306,27 @@
       return formatVersion;
     }
 
+    function restoreValidatedBackup(backup, sourceLabel = "JSONバックアップ", createSafetyBackup = false) {
+      const formatVersion = validateJsonBackup(backup);
+      const conversion = convertBackupData(backup.data, formatVersion, backup.deviceId);
+      if (createSafetyBackup) downloadPreRestoreBackup();
+      lastMigrationSummary = conversion.steps.length ? `${conversion.steps.join(", ")} 完了` : "変換不要";
+      const restored = normalizeState(conversion.data);
+      restored.deviceId = DEVICE_ID;
+      state = restored;
+      saveState();
+      renderAll();
+      if ($("dateFilter")) $("dateFilter").value = state.currentDate || dateKey();
+      if ($("monthFilter")) $("monthFilter").value = monthKey();
+      return {
+        sourceLabel,
+        formatVersion,
+        migration: lastMigrationSummary,
+        logCount: state.logs.length,
+        panelCount: state.panels.length
+      };
+    }
+
     async function importJsonBackupFile(file) {
       if (!file) return;
       try {
@@ -326,16 +358,8 @@
         ].join("\n");
         if (!confirm(message)) return;
 
-        const conversion = convertBackupData(backup.data, formatVersion, backup.deviceId);
-        lastMigrationSummary = conversion.steps.length ? `${conversion.steps.join(", ")} 完了` : "変換不要";
-        const restored = normalizeState(conversion.data);
-        restored.deviceId = DEVICE_ID;
-        state = restored;
-        saveState();
-        renderAll();
-        if ($("dateFilter")) $("dateFilter").value = state.currentDate || dateKey();
-        if ($("monthFilter")) $("monthFilter").value = monthKey();
-        alert(`JSONバックアップを復元しました。\n変換：${lastMigrationSummary}\n記録：${state.logs.length}件\n作業パネル：${state.panels.length}件`);
+        const result = restoreValidatedBackup(backup, "JSONバックアップ", false);
+        alert(`JSONバックアップを復元しました。\n変換：${result.migration}\n記録：${result.logCount}件\n作業パネル：${result.panelCount}件`);
       } catch (error) {
         console.error(error);
         alert(`JSONバックアップを復元できませんでした。\n\n${error?.message || "不明なエラー"}`);
@@ -369,6 +393,7 @@
     $("googleConnectBtn").addEventListener("click", connectGoogle);
     $("googleDisconnectBtn").addEventListener("click", disconnectGoogle);
     $("googleDriveSaveBtn").addEventListener("click", saveBackupToGoogleDrive);
+    $("googleDriveRestoreBtn").addEventListener("click", restoreBackupFromGoogleDrive);
 
     document.body.addEventListener("change", e => {
       const el=e.target;
