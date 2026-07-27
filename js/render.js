@@ -8,17 +8,12 @@
  * メイン状態・業務処理: js/app.js
  */
 
-function renderDeviceId() {
-      const el = $("deviceIdDisplay");
-      if (el) el.textContent = `D: ${DEVICE_ID}`;
-    }
-
 function renderDeveloperMode() {
       document.body.classList.toggle("developer-mode-enabled", developerModeEnabled);
       const button = $("developerModeBtn");
       if (button) {
         button.setAttribute("aria-pressed", String(developerModeEnabled));
-        button.textContent = developerModeEnabled ? "開発者モード ON" : "開発者モード";
+        button.textContent = developerModeEnabled ? "開発者モード ON" : "開発者モード OFF";
       }
       const panel = $("developerPanel");
       if (panel) panel.setAttribute("aria-hidden", String(!developerModeEnabled));
@@ -237,6 +232,5 @@ function renderAll() {
   measure("月選択描画", renderMonthFilter);
   measure("記録一覧描画", renderLogs);
   measure("折りたたみ状態反映", updateSectionCollapse);
-  measure("端末ID表示", renderDeviceId);
   measure("開発者表示", renderDeveloperMode);
 }
