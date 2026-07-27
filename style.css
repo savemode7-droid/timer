@@ -1558,3 +1558,26 @@ body.developer-mode-enabled .device-id-display.developer-only { display: block !
   .google-auth-row { align-items: flex-start; flex-direction: column; }
   .google-auth-actions { width: 100%; justify-content: flex-start; }
 }
+
+
+/* v40.2 Step7.0.2: Google Drive manual backup */
+.google-drive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #dbe5f2;
+}
+.google-drive-status {
+  margin-top: 2px;
+  font-weight: 700;
+  color: #475569;
+}
+.google-drive-status[data-state="saving"] { color: #1d4ed8; }
+.google-drive-status[data-state="success"] { color: #166534; }
+.google-drive-status[data-state="error"] { color: #b91c1c; }
+@media (max-width: 640px) {
+  .google-drive-row { align-items: flex-start; flex-direction: column; }
+}

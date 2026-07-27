@@ -166,6 +166,7 @@
         `Startup Performance: ${startupPerformanceText()}`,
         `Loading Performance: ${loadingPerformanceText()}`,
         `Google Auth: ${googleAuthStatusText()} (${googleAuthPerformanceText()})`,
+        `Google Drive: ${googleDriveStatusText()} (${googleDrivePerformanceText()})`,
         `User Agent: ${navigator.userAgent}`
       ].join("\n");
       try {
@@ -215,18 +216,22 @@
     }
 
 
-    function exportJsonBackup() {
+    function createJsonBackupData() {
       saveState();
-      const exportedAt = nowIso();
-      const backup = {
+      return {
         backupType: "work-timer-full-backup",
         dataFormatVersion: DATA_FORMAT_VERSION,
         appVersion: APP_VERSION,
-        exportedAt,
+        exportedAt: nowIso(),
         deviceId: DEVICE_ID,
         storageKey: STORAGE_KEY,
         data: JSON.parse(JSON.stringify(state))
       };
+    }
+
+    function exportJsonBackup() {
+      const backup = createJsonBackupData();
+      const exportedAt = backup.exportedAt;
       const json = JSON.stringify(backup, null, 2);
       const blob = new Blob([json], { type: "application/json;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -363,6 +368,7 @@
     $("copyDeveloperInfoBtn").addEventListener("click", copyDeveloperInfo);
     $("googleConnectBtn").addEventListener("click", connectGoogle);
     $("googleDisconnectBtn").addEventListener("click", disconnectGoogle);
+    $("googleDriveSaveBtn").addEventListener("click", saveBackupToGoogleDrive);
 
     document.body.addEventListener("change", e => {
       const el=e.target;

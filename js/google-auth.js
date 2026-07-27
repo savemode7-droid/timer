@@ -2,8 +2,8 @@
  * google-auth.js
  * Google Identity Services を使用したGoogle認証処理
  *
- * Step7.0.1ではDrive API用アクセストークンの取得・解除のみを担当する。
- * Driveへの保存・復元処理は含めない。
+ * Google Drive API用アクセストークンの取得・解除を担当する。
+ * Driveへの保存処理は google-drive.js が担当する。
  */
 
 const GOOGLE_OAUTH_CLIENT_ID = "532733057339-sj27dvhm33bqpb5pib4kl24s1k77e2p7.apps.googleusercontent.com";
@@ -58,6 +58,7 @@ function renderGoogleAuth() {
 
   if ($("developerGoogleStatus")) $("developerGoogleStatus").textContent = googleAuthStatusText();
   if ($("developerGoogleAuthTime")) $("developerGoogleAuthTime").textContent = googleAuthPerformanceText();
+  if (typeof renderGoogleDrive === "function") renderGoogleDrive();
 }
 
 function initializeGoogleAuth() {
