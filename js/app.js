@@ -23,6 +23,81 @@
       totalMs: 0
     };
 
+    const loadingPerformance = {
+      ready: false,
+      navigation: {},
+      resources: [],
+      totalMs: 0
+    };
+
+    function shortResourceName(url) {
+      try {
+        const parsed = new URL(url, location.href);
+        return parsed.pathname.split("/").filter(Boolean).slice(-2).join("/") || parsed.pathname || "document";
+      } catch {
+        return String(url || "不明");
+      }
+    }
+
+    function collectLoadingPerformance() {
+      const navigation = performance.getEntriesByType("navigation")[0];
+      if (navigation) {
+        loadingPerformance.navigation = {
+          dnsMs: Math.max(0, navigation.domainLookupEnd - navigation.domainLookupStart),
+          connectMs: Math.max(0, navigation.connectEnd - navigation.connectStart),
+          requestMs: Math.max(0, navigation.responseStart - navigation.requestStart),
+          responseMs: Math.max(0, navigation.responseEnd - navigation.responseStart),
+          domContentLoadedMs: navigation.domContentLoadedEventEnd,
+          loadMs: navigation.loadEventEnd,
+          transferBytes: navigation.transferSize || 0
+        };
+        loadingPerformance.totalMs = navigation.loadEventEnd || performance.now();
+      }
+
+      loadingPerformance.resources = performance.getEntriesByType("resource")
+        .filter(entry => entry.initiatorType === "script" || entry.initiatorType === "link")
+        .map(entry => ({
+          resource: shortResourceName(entry.name),
+          type: entry.initiatorType === "script" ? "JS" : "CSS",
+          durationMs: entry.duration,
+          transferBytes: entry.transferSize || 0,
+          cached: (entry.transferSize || 0) === 0
+        }))
+        .sort((a, b) => b.durationMs - a.durationMs);
+
+      loadingPerformance.ready = true;
+      console.groupCollapsed(`[読込計測] ${APP_VERSION} / load ${loadingPerformance.totalMs.toFixed(2)} ms`);
+      if (navigation) {
+        console.table([{
+          項目: "HTML・ページ読込",
+          DNSms: Number(loadingPerformance.navigation.dnsMs.toFixed(2)),
+          接続ms: Number(loadingPerformance.navigation.connectMs.toFixed(2)),
+          応答待ちms: Number(loadingPerformance.navigation.requestMs.toFixed(2)),
+          HTML受信ms: Number(loadingPerformance.navigation.responseMs.toFixed(2)),
+          DOMContentLoadedms: Number(loadingPerformance.navigation.domContentLoadedMs.toFixed(2)),
+          Loadms: Number(loadingPerformance.navigation.loadMs.toFixed(2)),
+          転送Bytes: loadingPerformance.navigation.transferBytes
+        }]);
+      }
+      console.table(loadingPerformance.resources.map(entry => ({
+        ファイル: entry.resource,
+        種類: entry.type,
+        時間ms: Number(entry.durationMs.toFixed(2)),
+        転送Bytes: entry.transferBytes,
+        キャッシュ: entry.cached ? "利用の可能性" : "ネットワーク取得"
+      })));
+      console.groupEnd();
+    }
+
+    function loadingPerformanceText() {
+      if (!loadingPerformance.ready) return "loadイベント待ち";
+      const nav = loadingPerformance.navigation;
+      const resources = loadingPerformance.resources
+        .map(entry => `${entry.resource} ${entry.durationMs.toFixed(2)}ms${entry.cached ? " [cache]" : ""}`)
+        .join(", ");
+      return `${loadingPerformance.totalMs.toFixed(2)}ms (DOMContentLoaded ${Number(nav.domContentLoadedMs || 0).toFixed(2)}ms, load ${Number(nav.loadMs || 0).toFixed(2)}ms${resources ? `; ${resources}` : ""})`;
+    }
+
     function measureStartupPhase(label, callback) {
       const startedAt = performance.now();
       const result = callback();
@@ -88,6 +163,7 @@
         `Converter: v1 -> v${DATA_FORMAT_VERSION}`,
         `Last Migration: ${lastMigrationSummary}`,
         `Startup Performance: ${startupPerformanceText()}`,
+        `Loading Performance: ${loadingPerformanceText()}`,
         `User Agent: ${navigator.userAgent}`
       ].join("\n");
       try {
@@ -381,5 +457,10 @@
     }
 
     initializeApp();
+
+    window.addEventListener("load", () => {
+      // loadEventEnd が記録された後に取得する。アプリの初期表示は待たせない。
+      setTimeout(collectLoadingPerformance, 0);
+    }, { once: true });
 
     startTimerTicker();

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v40.2 Step7.0.0B
+
+- Navigation Timing APIとResource Timing APIを利用したページ読込計測を追加。
+- HTMLのDNS、接続、応答待ち、受信、DOMContentLoaded、loadまでの時間を記録。
+- CSSおよび各JavaScriptファイルの取得時間、転送量、キャッシュ利用の可能性を開発者コンソールへ表形式で出力。
+- 既存の「開発情報をコピー」にLoading Performanceの内訳を追加。
+- 読込計測はload後に実行し、初回画面描画を待たせない構成。
+- アプリ内バージョンと全CSS／JavaScriptのキャッシュ識別子をStep7.0.0Bへ更新。
+- 機能仕様の変更なし。
+
 ## v40.2 Step7.0.0A
 
 - 起動速度の計測機能を追加。
