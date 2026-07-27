@@ -1514,3 +1514,47 @@ body.developer-mode-enabled .device-id-display.developer-only { display: block !
 @media (max-width: 520px) {
   .developer-grid { grid-template-columns: 1fr; }
 }
+
+/* v40.2 Step7.0.1: Google authentication */
+.google-auth-panel {
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+}
+.google-auth-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.google-auth-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+.google-auth-status {
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+}
+.google-auth-status[data-connected="true"] { color: #166534; }
+.google-auth-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.google-auth-message {
+  min-height: 1.2em;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+.google-auth-note {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #64748b;
+}
+@media (max-width: 520px) {
+  .google-auth-row { align-items: flex-start; flex-direction: column; }
+  .google-auth-actions { width: 100%; justify-content: flex-start; }
+}

@@ -26,6 +26,7 @@ function renderDeveloperMode() {
       if ($("developerStorageKey")) $("developerStorageKey").textContent = STORAGE_KEY;
       if ($("developerConverterVersion")) $("developerConverterVersion").textContent = `v1 → v${DATA_FORMAT_VERSION}`;
       if ($("developerMigrationStatus")) $("developerMigrationStatus").textContent = lastMigrationSummary;
+      if (typeof renderGoogleAuth === "function") renderGoogleAuth();
     }
 
 function renderItemManageList() {

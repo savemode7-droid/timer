@@ -10,6 +10,7 @@
  * タイマー処理: js/timer.js
  * パネル処理: js/panel.js
  * ログ処理: js/logs.js
+ * Google認証処理: js/google-auth.js
  * 一部の画面描画処理: js/render.js
  * 更新履歴: CHANGELOG.md
  */
@@ -164,6 +165,7 @@
         `Last Migration: ${lastMigrationSummary}`,
         `Startup Performance: ${startupPerformanceText()}`,
         `Loading Performance: ${loadingPerformanceText()}`,
+        `Google Auth: ${googleAuthStatusText()} (${googleAuthPerformanceText()})`,
         `User Agent: ${navigator.userAgent}`
       ].join("\n");
       try {
@@ -359,6 +361,8 @@
     $("monthFilter").addEventListener("change", () => saveState());
     $("developerModeBtn").addEventListener("click", toggleDeveloperMode);
     $("copyDeveloperInfoBtn").addEventListener("click", copyDeveloperInfo);
+    $("googleConnectBtn").addEventListener("click", connectGoogle);
+    $("googleDisconnectBtn").addEventListener("click", disconnectGoogle);
 
     document.body.addEventListener("change", e => {
       const el=e.target;
@@ -451,6 +455,7 @@
       measureStartupPhase("初回画面描画", renderAll);
       if ($("monthFilter")) $("monthFilter").value = monthKey();
       finishStartupPerformance();
+      initializeGoogleAuth();
       if (migratedCount > 0) {
         alert(`古い記録を${migratedCount}件更新しました。\n\nrecordId\ndeviceId\nupdatedAt\n\nを追加しました。`);
       }

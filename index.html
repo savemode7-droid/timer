@@ -1,7 +1,7 @@
 <!--
 ==================================================
 作業タイマー
-Version : v40.2 Step7.0.0C
+Version : v40.2 Step7.0.1
 Base    : v38.5 step1 actual
 Date    : 2026-07-05
 
@@ -18,7 +18,7 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=40.2-step7-0-0c">
+  <link rel="stylesheet" href="style.css?v=40.2-step7-0-1">
 </head>
 <body>
   <header>
@@ -82,6 +82,23 @@ Changes
         </div>
       </div></div>
     </section>
+
+    <section class="card google-auth-panel">
+      <h2 class="section-title">Google連携</h2>
+      <div class="google-auth-row">
+        <div>
+          <div class="google-auth-label">Google認証</div>
+          <div id="googleAuthStatus" class="google-auth-status" data-connected="false">初期化待ち</div>
+        </div>
+        <div class="google-auth-actions">
+          <button id="googleConnectBtn" class="secondary" type="button" disabled>Googleに接続</button>
+          <button id="googleDisconnectBtn" class="ghost" type="button" hidden>接続解除</button>
+        </div>
+      </div>
+      <div id="googleAuthMessage" class="google-auth-message" aria-live="polite"></div>
+      <div class="google-auth-note">この段階では認証確認のみです。Google Driveへの保存・復元はまだ行いません。</div>
+    </section>
+
     <section id="developerPanel" class="card developer-panel developer-only" aria-hidden="true">
       <h2 class="section-title">開発者情報</h2>
       <div class="developer-grid">
@@ -93,6 +110,8 @@ Changes
         <div><span>保存キー</span><strong id="developerStorageKey"></strong></div>
         <div><span>コンバーター</span><strong id="developerConverterVersion"></strong></div>
         <div><span>最終変換</span><strong id="developerMigrationStatus"></strong></div>
+        <div><span>Google認証</span><strong id="developerGoogleStatus"></strong></div>
+        <div><span>Google認証時間</span><strong id="developerGoogleAuthTime"></strong></div>
       </div>
       <div class="developer-actions">
         <button id="copyDeveloperInfoBtn" class="secondary" type="button">開発情報をコピー</button>
@@ -163,14 +182,16 @@ Changes
     </div>
   </dialog>
 
-  <script src="js/version.js?v=40.2-step7-0-0c"></script>
-  <script src="js/constants.js?v=40.2-step7-0-0c"></script>
-  <script src="js/utils.js?v=40.2-step7-0-0c"></script>
-  <script src="js/storage.js?v=40.2-step7-0-0c"></script>
-  <script src="js/items.js?v=40.2-step7-0-0c"></script>
-  <script src="js/render.js?v=40.2-step7-0-0c"></script>
-  <script src="js/timer.js?v=40.2-step7-0-0c"></script>
-  <script src="js/panel.js?v=40.2-step7-0-0c"></script>
-  <script src="js/logs.js?v=40.2-step7-0-0c"></script>
-  <script src="js/app.js?v=40.2-step7-0-0c"></script>
+  <script src="js/version.js?v=40.2-step7-0-1"></script>
+  <script src="js/constants.js?v=40.2-step7-0-1"></script>
+  <script src="js/utils.js?v=40.2-step7-0-1"></script>
+  <script src="js/storage.js?v=40.2-step7-0-1"></script>
+  <script src="js/items.js?v=40.2-step7-0-1"></script>
+  <script src="js/render.js?v=40.2-step7-0-1"></script>
+  <script src="js/timer.js?v=40.2-step7-0-1"></script>
+  <script src="js/panel.js?v=40.2-step7-0-1"></script>
+  <script src="js/logs.js?v=40.2-step7-0-1"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="js/google-auth.js?v=40.2-step7-0-1"></script>
+  <script src="js/app.js?v=40.2-step7-0-1"></script>
 </html>
