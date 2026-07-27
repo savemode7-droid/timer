@@ -222,4 +222,21 @@ function renderLogs() {
     : `<div class="empty">この日の記録はありません。</div>`;
 }
 
-function renderAll() { finalizeIfDateChanged(); renderPanels(); renderItemManageList(); renderSummary(); renderMonthFilter(); renderLogs(); updateSectionCollapse(); renderDeviceId(); renderDeveloperMode(); }
+function renderAll() {
+  const measure = (label, callback) => {
+    if (typeof startupPerformance !== "undefined" && startupPerformance.active) {
+      return measureStartupPhase(label, callback);
+    }
+    return callback();
+  };
+
+  measure("日付変更処理", finalizeIfDateChanged);
+  measure("作業パネル描画", renderPanels);
+  measure("項目管理描画", renderItemManageList);
+  measure("合計描画", renderSummary);
+  measure("月選択描画", renderMonthFilter);
+  measure("記録一覧描画", renderLogs);
+  measure("折りたたみ状態反映", updateSectionCollapse);
+  measure("端末ID表示", renderDeviceId);
+  measure("開発者表示", renderDeveloperMode);
+}

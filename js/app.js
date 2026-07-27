@@ -16,9 +16,45 @@
 
     let lastMigrationSummary = "未実行";
 
-    const DEVICE_ID = getDeviceId();
+    const startupPerformance = {
+      active: true,
+      startedAt: performance.now(),
+      phases: [],
+      totalMs: 0
+    };
 
-    let state = loadState();
+    function measureStartupPhase(label, callback) {
+      const startedAt = performance.now();
+      const result = callback();
+      startupPerformance.phases.push({ label, ms: performance.now() - startedAt });
+      return result;
+    }
+
+    function finishStartupPerformance() {
+      startupPerformance.totalMs = performance.now() - startupPerformance.startedAt;
+      startupPerformance.active = false;
+      const rows = startupPerformance.phases.map(phase => ({
+        処理: phase.label,
+        時間ms: Number(phase.ms.toFixed(2))
+      }));
+      rows.push({ 処理: "起動全体", 時間ms: Number(startupPerformance.totalMs.toFixed(2)) });
+      console.groupCollapsed(`[起動計測] ${APP_VERSION} / ${startupPerformance.totalMs.toFixed(2)} ms`);
+      console.table(rows);
+      console.log(`記録: ${state.logs.length}件 / パネル: ${state.panels.length}件 / 項目1: ${state.items.length}件 / 項目2: ${(state.item2s || []).length}件`);
+      console.groupEnd();
+    }
+
+    function startupPerformanceText() {
+      if (!startupPerformance.totalMs) return "未計測";
+      const details = startupPerformance.phases
+        .map(phase => `${phase.label} ${phase.ms.toFixed(2)}ms`)
+        .join(", ");
+      return `${startupPerformance.totalMs.toFixed(2)}ms (${details})`;
+    }
+
+    const DEVICE_ID = measureStartupPhase("端末IDの取得", getDeviceId);
+
+    let state = measureStartupPhase("保存データの読込・正規化", loadState);
     let developerModeEnabled = localStorage.getItem(DEVELOPER_MODE_KEY) === "true";
     function getDeviceId() {
       let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -51,6 +87,7 @@
         `Storage Key: ${STORAGE_KEY}`,
         `Converter: v1 -> v${DATA_FORMAT_VERSION}`,
         `Last Migration: ${lastMigrationSummary}`,
+        `Startup Performance: ${startupPerformanceText()}`,
         `User Agent: ${navigator.userAgent}`
       ].join("\n");
       try {
@@ -334,9 +371,10 @@
       // dateFilter は今日、monthFilter は renderMonthFilter() 内で当月が選択される。
       const today = dateKey();
       if ($("dateFilter")) $("dateFilter").value = today;
-      const migratedCount = migrateLegacyLogs();
-      renderAll();
+      const migratedCount = measureStartupPhase("旧データ変換", migrateLegacyLogs);
+      measureStartupPhase("初回画面描画", renderAll);
       if ($("monthFilter")) $("monthFilter").value = monthKey();
+      finishStartupPerformance();
       if (migratedCount > 0) {
         alert(`古い記録を${migratedCount}件更新しました。\n\nrecordId\ndeviceId\nupdatedAt\n\nを追加しました。`);
       }
