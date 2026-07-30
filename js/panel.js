@@ -148,10 +148,19 @@
       renderLogs();
     }
 
-    function changePanelTimer(panelId, value) {
-      const panel = state.panels.find(p=>p.id===panelId); if (!panel) return;
-      panel.timerMinutes = Math.max(0, Number(value || 0));
+    function changePanelTimerPart(panelId, part, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.running) return;
+      const currentTotal = Math.max(0, Number(panel.timerMinutes || 0));
+      let hours = Math.min(99, Math.floor(currentTotal / 60));
+      let minutes = Math.min(59, currentTotal % 60);
+      const numericValue = Math.max(0, Math.floor(Number(value || 0)));
+
+      if (part === "hours") hours = Math.min(99, numericValue);
+      if (part === "minutes") minutes = Math.min(59, numericValue);
+
+      panel.timerMinutes = hours * 60 + minutes;
       saveState();
+      renderPanels();
     }
 
     function resetPanel(id) {

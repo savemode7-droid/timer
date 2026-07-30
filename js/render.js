@@ -74,12 +74,16 @@ function renderPanels() {
 
   const itemOptions = (selectedId) => `<option value="">項目1を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
   const item2Options = (selectedId) => `<option value="">項目2を選択</option>` + sortedItem2s().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
-  const timerOptions = (selectedMinutes) => {
-    const options = [0,1,2,3,4,5,10,15,20,25,30,40,50,60];
-    return options.map(min => {
-      const label = min === 0 ? "タイマーなし" : `${min}分`;
-      return `<option value="${min}" ${Number(selectedMinutes || 0) === min ? "selected" : ""}>${label}</option>`;
-    }).join("");
+  const timerInputHtml = (panel, running) => {
+    const totalMinutes = Math.max(0, Number(panel.timerMinutes || 0));
+    const hours = Math.min(99, Math.floor(totalMinutes / 60));
+    const minutes = Math.min(59, totalMinutes % 60);
+    const disabled = running ? "disabled" : "";
+    return `
+      <div class="timer-duration-inputs" aria-label="タイマー設定時間">
+        <label><input type="number" min="0" max="99" step="1" inputmode="numeric" data-timer-hours="${panel.id}" value="${hours}" ${disabled}><span>時間</span></label>
+        <label><input type="number" min="0" max="59" step="1" inputmode="numeric" data-timer-minutes="${panel.id}" value="${minutes}" ${disabled}><span>分</span></label>
+      </div>`;
   };
 
   const allPanels = sortedPanelsForDisplay();
@@ -99,7 +103,7 @@ function renderPanels() {
           : `<button class="start-btn" data-start="${panel.id}">開始</button>`);
     const actionControls = completed ? `` : `
         <div class="main-actions timer-action-row">
-          <select class="timer-select" data-timer-panel="${panel.id}" ${running ? "disabled" : ""}>${timerOptions(panel.timerMinutes)}</select>
+          ${timerInputHtml(panel, running)}
           ${startEndButton}
           <button class="green complete-btn" data-complete-panel="${panel.id}" ${!canComplete ? "disabled" : ""}>完了</button>
         </div>
