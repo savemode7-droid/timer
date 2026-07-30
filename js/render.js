@@ -81,19 +81,16 @@ function renderPanels() {
     const hours = Math.min(99, Math.floor(totalMinutes / 60));
     const minutes = Math.min(59, totalMinutes % 60);
     const disabled = running ? "disabled" : "";
-    const options = presetMinutes.map(min => {
+    const customLabel = isCustom && totalMinutes > 0
+      ? `任意（${hours > 0 ? `${hours}時間` : ""}${minutes > 0 ? `${minutes}分` : ""}）`
+      : "任意";
+    const options = `<option value="custom" ${isCustom ? "selected" : ""}>${customLabel}</option>` + presetMinutes.map(min => {
       const label = min === 0 ? "タイマーなし" : `${min}分`;
       return `<option value="${min}" ${!isCustom && totalMinutes === min ? "selected" : ""}>${label}</option>`;
-    }).join("") + `<option value="custom" ${isCustom ? "selected" : ""}>任意</option>`;
-    const customInputs = isCustom ? `
-      <div class="timer-duration-inputs" aria-label="任意のタイマー設定時間">
-        <label><input type="number" min="0" max="99" step="1" inputmode="numeric" data-timer-hours="${panel.id}" value="${hours}" ${disabled}><span>時間</span></label>
-        <label><input type="number" min="0" max="59" step="1" inputmode="numeric" data-timer-minutes="${panel.id}" value="${minutes}" ${disabled}><span>分</span></label>
-      </div>` : "";
+    }).join("");
     return `
       <div class="timer-setting-control">
         <select class="timer-select" data-timer-panel="${panel.id}" ${disabled}>${options}</select>
-        ${customInputs}
       </div>`;
   };
 

@@ -18,7 +18,7 @@ Changes
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>作業タイマー</title>
-  <link rel="stylesheet" href="style.css?v=40.2-step7-1-1">
+  <link rel="stylesheet" href="style.css?v=40.2-step7-1-2">
 </head>
 <body>
   <header>
@@ -172,6 +172,27 @@ Changes
   </dialog>
 
 
+
+  <dialog id="customTimerDialog">
+    <div class="dialog-body">
+      <div class="dialog-title">任意のタイマー時間</div>
+      <div class="custom-timer-dialog-grid">
+        <label>
+          <span>時間</span>
+          <input id="customTimerHours" type="number" min="0" max="99" step="1" inputmode="numeric" value="0" />
+        </label>
+        <label>
+          <span>分</span>
+          <input id="customTimerMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" value="0" />
+        </label>
+      </div>
+      <div class="row dialog-actions">
+        <button id="saveCustomTimerBtn" type="button">設定</button>
+        <button id="cancelCustomTimerBtn" class="ghost" type="button">キャンセル</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="logEditDialog">
     <div class="dialog-body">
       <div class="dialog-title">記録を編集</div>
@@ -202,17 +223,17 @@ Changes
     </div>
   </dialog>
 
-  <script src="js/version.js?v=40.2-step7-1-1"></script>
-  <script src="js/constants.js?v=40.2-step7-1-1"></script>
-  <script src="js/utils.js?v=40.2-step7-1-1"></script>
-  <script src="js/storage.js?v=40.2-step7-1-1"></script>
-  <script src="js/items.js?v=40.2-step7-1-1"></script>
-  <script src="js/render.js?v=40.2-step7-1-1"></script>
-  <script src="js/timer.js?v=40.2-step7-1-1"></script>
-  <script src="js/panel.js?v=40.2-step7-1-1"></script>
-  <script src="js/logs.js?v=40.2-step7-1-1"></script>
+  <script src="js/version.js?v=40.2-step7-1-2"></script>
+  <script src="js/constants.js?v=40.2-step7-1-2"></script>
+  <script src="js/utils.js?v=40.2-step7-1-2"></script>
+  <script src="js/storage.js?v=40.2-step7-1-2"></script>
+  <script src="js/items.js?v=40.2-step7-1-2"></script>
+  <script src="js/render.js?v=40.2-step7-1-2"></script>
+  <script src="js/timer.js?v=40.2-step7-1-2"></script>
+  <script src="js/panel.js?v=40.2-step7-1-2"></script>
+  <script src="js/logs.js?v=40.2-step7-1-2"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="js/google-auth.js?v=40.2-step7-1-1"></script>
-  <script src="js/google-drive.js?v=40.2-step7-1-1"></script>
-  <script src="js/app.js?v=40.2-step7-1-1"></script>
+  <script src="js/google-auth.js?v=40.2-step7-1-2"></script>
+  <script src="js/google-drive.js?v=40.2-step7-1-2"></script>
+  <script src="js/app.js?v=40.2-step7-1-2"></script>
 </html>

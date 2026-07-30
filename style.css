@@ -1381,32 +1381,6 @@ button.complete-btn:disabled {
   gap: 8px;
   align-items: center;
 }
-.timer-duration-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  min-width: 0;
-}
-.timer-duration-inputs label {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  white-space: nowrap;
-}
-.timer-duration-inputs input {
-  width: 100%;
-  min-width: 0;
-  text-align: right;
-}
-@media (max-width: 420px) {
-  .timer-action-row {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-  .timer-duration-inputs {
-    grid-column: 1 / -1;
-  }
-}
 
 
 /* v40.1 Step1.1: Device ID display */
@@ -1615,4 +1589,26 @@ body.developer-mode-enabled .device-id-display.developer-only { display: block !
     grid-column: 1 / -1;
     grid-template-columns: 1fr;
   }
+}
+
+
+/* v40.2 Step7.1.2: custom timer popup */
+.custom-timer-dialog-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.custom-timer-dialog-grid label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+.custom-timer-dialog-grid input {
+  width: 100%;
+  text-align: right;
+  font-size: 20px;
+}
+@media (max-width: 420px) {
+  .custom-timer-dialog-grid { grid-template-columns: 1fr 1fr; }
 }

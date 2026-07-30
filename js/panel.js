@@ -148,30 +148,49 @@
       renderLogs();
     }
 
-    function changePanelTimer(panelId, value) {
+    let activeCustomTimerPanelId = null;
+
+    function openCustomTimerDialog(panelId) {
       const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.running) return;
-      if (value === "custom") {
-        panel.timerMode = "custom";
-      } else {
-        panel.timerMode = "preset";
-        panel.timerMinutes = Math.max(0, Number(value || 0));
-      }
-      saveState();
+      const totalMinutes = Math.max(0, Number(panel.timerMinutes || 0));
+      activeCustomTimerPanelId = panelId;
+      $("customTimerHours").value = Math.min(99, Math.floor(totalMinutes / 60));
+      $("customTimerMinutes").value = Math.min(59, totalMinutes % 60);
+      $("customTimerDialog").showModal();
+      setTimeout(() => $("customTimerHours").focus(), 0);
+    }
+
+    function closeCustomTimerDialog() {
+      activeCustomTimerPanelId = null;
+      $("customTimerDialog").close();
       renderPanels();
     }
 
-    function changePanelTimerPart(panelId, part, value) {
-      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.running) return;
-      const currentTotal = Math.max(0, Number(panel.timerMinutes || 0));
-      let hours = Math.min(99, Math.floor(currentTotal / 60));
-      let minutes = Math.min(59, currentTotal % 60);
-      const numericValue = Math.max(0, Math.floor(Number(value || 0)));
-
-      if (part === "hours") hours = Math.min(99, numericValue);
-      if (part === "minutes") minutes = Math.min(59, numericValue);
-
+    function saveCustomTimerSetting() {
+      const panel = state.panels.find(p=>p.id===activeCustomTimerPanelId);
+      if (!panel || panel.running) return closeCustomTimerDialog();
+      const hours = Math.min(99, Math.max(0, Math.floor(Number($("customTimerHours").value || 0))));
+      const minutes = Math.min(59, Math.max(0, Math.floor(Number($("customTimerMinutes").value || 0))));
+      if (hours === 0 && minutes === 0) {
+        alert("時間または分を入力してください。");
+        return;
+      }
       panel.timerMode = "custom";
       panel.timerMinutes = hours * 60 + minutes;
+      saveState();
+      activeCustomTimerPanelId = null;
+      $("customTimerDialog").close();
+      renderPanels();
+    }
+
+    function changePanelTimer(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.running) return;
+      if (value === "custom") {
+        openCustomTimerDialog(panelId);
+        return;
+      }
+      panel.timerMode = "preset";
+      panel.timerMinutes = Math.max(0, Number(value || 0));
       saveState();
       renderPanels();
     }

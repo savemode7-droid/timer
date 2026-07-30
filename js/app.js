@@ -380,6 +380,12 @@
     $("newItem2Kana").addEventListener("keydown", e => { if(e.key==="Enter") addItem2FromDialog(); });
     $("saveLogEditBtn").addEventListener("click", saveLogEdit);
     $("cancelLogEditBtn").addEventListener("click", () => $("logEditDialog").close());
+    $("saveCustomTimerBtn").addEventListener("click", saveCustomTimerSetting);
+    $("cancelCustomTimerBtn").addEventListener("click", closeCustomTimerDialog);
+    $("customTimerDialog").addEventListener("cancel", e => {
+      e.preventDefault();
+      closeCustomTimerDialog();
+    });
     $("todayBtn").addEventListener("click", () => { $("dateFilter").value=dateKey(); renderLogs(); renderSummary(); });
     $("dateFilter").addEventListener("change", () => { renderLogs(); renderSummary(); });
     $("monthCsvBtn").addEventListener("click", exportMonthCsv);
@@ -402,8 +408,6 @@
       if(el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
       if(el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
       if(el.dataset.timerPanel) changePanelTimer(el.dataset.timerPanel, el.value);
-      if(el.dataset.timerHours) changePanelTimerPart(el.dataset.timerHours, "hours", el.value);
-      if(el.dataset.timerMinutes) changePanelTimerPart(el.dataset.timerMinutes, "minutes", el.value);
     });
     document.body.addEventListener("input", e => { const el=e.target; if(el.dataset.customName) changeCustomName(el.dataset.customName, el.value); });
     document.body.addEventListener("keydown", e => {
