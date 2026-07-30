@@ -10,7 +10,7 @@
 
     function newPanel(collapsed = false) {
       const id = crypto.randomUUID();
-      return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, timerMinutes:0, start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
+      return { id, itemId:null, item2Id:null, customName:"", title:"", editingTitle:false, timerMinutes:0, timerMode:"preset", start:null, end:null, running:false, completed:false, collapsed:!!collapsed, date:dateKey(), activeLogId:null, lastLogId:null };
     }
 
     function sortedPanelsForDisplay() {
@@ -148,6 +148,18 @@
       renderLogs();
     }
 
+    function changePanelTimer(panelId, value) {
+      const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.running) return;
+      if (value === "custom") {
+        panel.timerMode = "custom";
+      } else {
+        panel.timerMode = "preset";
+        panel.timerMinutes = Math.max(0, Number(value || 0));
+      }
+      saveState();
+      renderPanels();
+    }
+
     function changePanelTimerPart(panelId, part, value) {
       const panel = state.panels.find(p=>p.id===panelId); if (!panel || panel.running) return;
       const currentTotal = Math.max(0, Number(panel.timerMinutes || 0));
@@ -158,6 +170,7 @@
       if (part === "hours") hours = Math.min(99, numericValue);
       if (part === "minutes") minutes = Math.min(59, numericValue);
 
+      panel.timerMode = "custom";
       panel.timerMinutes = hours * 60 + minutes;
       saveState();
       renderPanels();

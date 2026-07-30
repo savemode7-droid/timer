@@ -75,14 +75,25 @@ function renderPanels() {
   const itemOptions = (selectedId) => `<option value="">項目1を選択</option>` + sortedItems().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
   const item2Options = (selectedId) => `<option value="">項目2を選択</option>` + sortedItem2s().map(item => `<option value="${item.id}" ${item.id===selectedId ? "selected" : ""}>${escapeHtml(item.name)}</option>`).join("");
   const timerInputHtml = (panel, running) => {
+    const presetMinutes = [0,1,2,3,4,5,10,15,20,25,30,40,45,50,60];
     const totalMinutes = Math.max(0, Number(panel.timerMinutes || 0));
+    const isCustom = panel.timerMode === "custom" || !presetMinutes.includes(totalMinutes);
     const hours = Math.min(99, Math.floor(totalMinutes / 60));
     const minutes = Math.min(59, totalMinutes % 60);
     const disabled = running ? "disabled" : "";
-    return `
-      <div class="timer-duration-inputs" aria-label="タイマー設定時間">
+    const options = presetMinutes.map(min => {
+      const label = min === 0 ? "タイマーなし" : `${min}分`;
+      return `<option value="${min}" ${!isCustom && totalMinutes === min ? "selected" : ""}>${label}</option>`;
+    }).join("") + `<option value="custom" ${isCustom ? "selected" : ""}>任意</option>`;
+    const customInputs = isCustom ? `
+      <div class="timer-duration-inputs" aria-label="任意のタイマー設定時間">
         <label><input type="number" min="0" max="99" step="1" inputmode="numeric" data-timer-hours="${panel.id}" value="${hours}" ${disabled}><span>時間</span></label>
         <label><input type="number" min="0" max="59" step="1" inputmode="numeric" data-timer-minutes="${panel.id}" value="${minutes}" ${disabled}><span>分</span></label>
+      </div>` : "";
+    return `
+      <div class="timer-setting-control">
+        <select class="timer-select" data-timer-panel="${panel.id}" ${disabled}>${options}</select>
+        ${customInputs}
       </div>`;
   };
 

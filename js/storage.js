@@ -47,6 +47,7 @@ function normalizeState(s) {
             title: p.title || "",
             editingTitle: !!p.editingTitle,
             timerMinutes: Number(p.timerMinutes || 0),
+            timerMode: p.timerMode === "custom" ? "custom" : "preset",
             start,
             end,
             running: !!(p.running || p.runningSince),

@@ -33,6 +33,7 @@ function startPanel(id) {
     panel.item2Id = null;
     panel.customName = "";
     panel.timerMinutes = 0;
+    panel.timerMode = "preset";
     panel.start = null;
     panel.end = null;
     panel.running = false;

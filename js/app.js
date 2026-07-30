@@ -401,6 +401,7 @@
       if(el.dataset.select2Panel) changePanelItem2(el.dataset.select2Panel, el.value);
       if(el.dataset.startTime) updatePanelTime(el.dataset.startTime, "start", el.value);
       if(el.dataset.endTime) updatePanelTime(el.dataset.endTime, "end", el.value);
+      if(el.dataset.timerPanel) changePanelTimer(el.dataset.timerPanel, el.value);
       if(el.dataset.timerHours) changePanelTimerPart(el.dataset.timerHours, "hours", el.value);
       if(el.dataset.timerMinutes) changePanelTimerPart(el.dataset.timerMinutes, "minutes", el.value);
     });
